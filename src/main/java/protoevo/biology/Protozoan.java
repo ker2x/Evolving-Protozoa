@@ -151,8 +151,12 @@ public class Protozoan extends Cell
 		for (Retina.Cell cell : retina.getCells()) {
 			Vector2[] rays = cell.getRays();
 			for (int i = 0; i < rays.length; i++) {
-				Vector2 ray = rays[i].rotate(dirAngle).setLength(interactRange);
-				Vector2[] collisions = o.rayCollisions(getPos(), getPos().add(ray));
+				//Vector2 ray = rays[i].rotate(dirAngle).setLength(interactRange);
+				//Vector2[] collisions = o.rayCollisions(getPos(), getPos().add(ray));
+				Vector2[] collisions = null;
+				// ray = getPos + ray
+				//ray.set(getPos().getX() + ray.getX(), getPos().getY() + ray.getY());
+				//Vector2[] collisions = o.rayCollisions(getPos(), ray);
 				if (collisions == null || collisions.length == 0)
 					continue;
 
