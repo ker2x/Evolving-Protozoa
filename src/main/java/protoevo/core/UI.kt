@@ -1,404 +1,359 @@
-package protoevo.core;
-
-import java.awt.*;
-import java.util.*;
-
-import protoevo.biology.NNBrain;
-import protoevo.neat.NeuralNetwork;
-import protoevo.neat.Neuron;
-import protoevo.biology.Cell;
-import protoevo.utils.*;
-import protoevo.biology.Protozoan;
-import protoevo.utils.Window;
-
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-
-public class UI implements ChangeListener {
-	private final Window window;
-	private final Simulation simulation;
-	private final protoevo.core.Renderer renderer;
-	private final TextObject title, creatingTank;
-	private final ArrayList<TextObject> info;
-	private final ArrayList<TextObject> debugInfo;
-	private final int infoTextSize, textAwayFromEdge;
-	private boolean showFPS = Settings.showFPS;
-
-	public UI(Window window, Simulation simulation, Renderer renderer)
-	{
-		this.window = window;
-		this.simulation = simulation;
-		this.renderer = renderer;
-
-		title = new TextObject("Evolving Protozoa",
-				TextStyle.fontName,
-				window.getHeight() / 20, 
-				new Vector2(window.getWidth() / 60f, window.getHeight() / 15f));
-		title.setColor(Color.WHITE);
-		
-		info = new ArrayList<>();
-		infoTextSize = window.getHeight() / 50;
-
-		TextObject pelletText = new TextObject("Number of pellets: ", infoTextSize);
-		pelletText.setColor(Color.WHITE.darker());
-
-		TextObject protozoaText = new TextObject("Number of protozoa: ", infoTextSize);
-		protozoaText.setColor(Color.WHITE.darker());
-
-		TextObject trackingFitness = new TextObject("Generation", infoTextSize);
-		trackingFitness.setColor(Color.WHITE.darker());
-
-		info.add(protozoaText);
-		info.add(pelletText);
-		info.add(trackingFitness);
-
-		TextObject fpsText = new TextObject("FPS: ",
-				infoTextSize,
-				new Vector2(window.getWidth() * 0.9f, window.getHeight() / 20f));
-		fpsText.setColor(Color.YELLOW.darker());
-
-		debugInfo = new ArrayList<>();
-		debugInfo.add(fpsText);
-		textAwayFromEdge = window.getWidth() / 60;
-
-		creatingTank = new TextObject("Generating Initial Tank...", infoTextSize,
-				new Vector2(textAwayFromEdge, getYPosLHS(1)));
-		creatingTank.setColor(Color.WHITE.darker());
-
-		//Create the slider
-		JSlider framesPerSecond = new JSlider(JSlider.VERTICAL,
-				10, 60, 30);
-		framesPerSecond.addChangeListener(this);
-		framesPerSecond.setMajorTickSpacing(10);
-		framesPerSecond.setPaintTicks(true);
-
-		//Create the label table
-		Hashtable<Integer, JLabel> labelTable = new Hashtable<>(3);
-		labelTable.put(0, new JLabel("Stop") );
-		labelTable.put(60/10, new JLabel("Slow") );
-		labelTable.put(60, new JLabel("Fast") );
-		framesPerSecond.setLabelTable( labelTable );
-
-		framesPerSecond.setPaintLabels(true);
-	}
-
-	public float getYPosLHS(int i) {
-		return 1.3f*infoTextSize*i + 3 * window.getHeight() / 20f;
-	}
-
-	public float getYPosRHS(int i) {
-		return 1.3f*infoTextSize*i + window.getHeight() / 20f;
-	}
-
-	private int renderStats(Graphics2D g, int lineNumber, Map<String, Float> stats) {
-
-		for (Map.Entry<String, Float> entityStat : stats.entrySet()) {
-			String text = entityStat.getKey() + ": " + TextStyle.numberToString(entityStat.getValue(), 2);
-			TextObject statText = new TextObject(
-					text, infoTextSize,
-					new Vector2(textAwayFromEdge, getYPosLHS(lineNumber))
-			);
-			statText.setColor(Color.WHITE.darker());
-			statText.render(g);
-			lineNumber++;
-		}
-		return lineNumber;
-	}
-
-	public void render(Graphics2D g)
-	{
-		title.render(g);
-
-		int lineNumber = 0;
-
-		if (!simulation.getTank().hasBeenInitialised()) {
-			creatingTank.render(g);
-			return;
-		}
-
-		Cell tracked = renderer.getTracked();
-		if (tracked == null) {
-			Map<String, Float> tankStats = simulation.getTank().getStats();
-			lineNumber = renderStats(g, lineNumber, tankStats);
-
-		} else {
-			for (lineNumber = 0; lineNumber < info.size(); lineNumber++)
-				info.get(lineNumber).setPosition(new Vector2(textAwayFromEdge, getYPosLHS(lineNumber)));
-
-
-			info.get(0).setText("Number of pellets: " + simulation.getTank().numberOfPellets());
-			info.get(0).render(g);
-			info.get(1).setText("Number of protozoa: " + simulation.getTank().numberOfProtozoa());
-			info.get(1).render(g);
-//			lineNumber++;
-
-			if (tracked.isDead() && !tracked.getChildren().isEmpty()) {
-				renderer.track(tracked.getChildren().iterator().next());
-				tracked = renderer.getTracked();
-			}
-
-			TextObject statsTitle = new TextObject(
-					tracked.getPrettyName() + " Stats",
-					(int) (infoTextSize * 1.1),
-					new Vector2(textAwayFromEdge, getYPosLHS(lineNumber))
-			);
-			statsTitle.setColor(Color.WHITE.darker());
-			statsTitle.render(g);
-
-			lineNumber++;
-
-			renderStats(g, lineNumber++, tracked.getStats());
-
-			if (tracked instanceof Protozoan && ((Protozoan) tracked).brain instanceof NNBrain) {
-				NNBrain brain = (NNBrain) ((Protozoan) tracked).brain;
-				renderBrainNetwork(brain.network, g);
-			}
-		}
-
-		renderDebugStats(g);
-	}
-
-	public void toggleShowFPS() {
-		showFPS = !showFPS;
-	}
-
-	private void renderDebugStats(Graphics2D g) {
-		if (!simulation.inDebugMode() && !showFPS)
-			return;
-
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		int lineNumber = 0;
-		HashMap<String, Integer> stats = renderer.getStats();
-
-		TextObject[] statTexts = new TextObject[stats.keySet().size()];
-		int maxWidth = 0;
-		for (Map.Entry<String, Integer> entityStat : stats.entrySet()) {
-			String text = entityStat.getKey() + ": " + TextStyle.numberToString(entityStat.getValue(), 2);
-			TextObject statText = new TextObject(
-					text, infoTextSize,
-					new Vector2(0, getYPosRHS(lineNumber))
-			);
-			maxWidth = Math.max(maxWidth, statText.getWidth());
-			statText.setColor(Color.YELLOW.darker());
-			statTexts[lineNumber] = statText;
-			lineNumber++;
-		}
-
-		int x = (int) (0.98 * window.getWidth() - maxWidth);
-		for (TextObject statText : statTexts) {
-			int y = (int) statText.getPosition().y;
-			statText.setPosition(new Vector2(x, y));
-			if (simulation.inDebugMode() || (showFPS && statText.getText().contains("FPS")))
-				statText.render(g);
-		}
-
-		if (renderer.antiAliasing)
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		else
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-	}
-
-	private void renderBrainNetwork(NeuralNetwork nn, Graphics2D g) {
-		int networkDepth = nn.getDepth();
-		int boxWidth = (int) (window.getWidth() / 2.0 - 1.2 * renderer.getTrackingScopeRadius());
-		int boxHeight = 3 * window.getHeight() / 4;
-
-		int boxXStart = window.getWidth() - (int) (boxWidth * 1.1);
-		int boxYStart = (window.getHeight() - boxHeight) / 2;
-
-		if (simulation.inDebugMode()) {
-			g.setColor(Color.YELLOW.darker());
-			g.drawRect(boxXStart, boxYStart, boxWidth, boxHeight);
-			for (int y = boxYStart; y < boxYStart + boxHeight; y += boxHeight / networkDepth)
-				g.drawLine(boxXStart, y, boxXStart + boxWidth, y);
-		}
-
-		if (!nn.hasComputedGraphicsPositions())
-			precomputeGraphicsPositions(nn, boxXStart, boxYStart, boxWidth, boxHeight);
-
-
-		int r = nn.getGraphicsNodeSpacing() / 8;
-		for (Neuron neuron : nn.getNeurons()) {
-			if (!neuron.getType().equals(Neuron.Type.SENSOR) && neuron.isConnectedToOutput()) {
-				Stroke s = g.getStroke();
-
-				for (int i = 0; i < neuron.getInputs().length; i++) {
-					Neuron inputNeuron = neuron.getInputs()[i];
-
-					float weight = inputNeuron.getLastState() * neuron.getWeights()[i];
-					if (Math.abs(weight) <= 1e-4)
-						continue;
-
-					if (weight > 0) {
-						float p = weight > 1 ? 1 : weight;
-						g.setColor(new Color(
-								(int) (240 - 100 * p), 240, (int) (255 - 100 * p)
-						));
-					} else if (weight < 0) {
-						float p = weight < -1 ? 1 : -weight;
-						g.setColor(new Color(
-								240, (int) (240 - 100 * p), (int) (255 - 100 * p)
-						));
-					} else {
-						g.setColor(new Color(240, 240, 240));
-					}
-					g.setStroke(new BasicStroke((int) (r * Math.abs(weight))));
-
-					if (neuron == inputNeuron) {
-						g.drawOval(
-								neuron.getGraphicsX(),
-								neuron.getGraphicsY() - 2*r,
-								3*r,
-								3*r);
-					} else if (inputNeuron.getDepth() == neuron.getDepth()) {
-						int width = boxWidth / (2 * networkDepth);
-						int height = Math.abs(neuron.getGraphicsY() - inputNeuron.getGraphicsY());
-						int x = neuron.getGraphicsX() - width / 2;
-						int y = Math.min(neuron.getGraphicsY(), inputNeuron.getGraphicsY());
-						g.drawArc(x, y, width, height,-90, 180);
-					} else {
-						g.drawLine(neuron.getGraphicsX(), neuron.getGraphicsY(),
-								inputNeuron.getGraphicsX(), inputNeuron.getGraphicsY());
-					}
-				}
-				g.setStroke(s);
-			}
-		}
-
-		for (Neuron neuron : nn.getNeurons()) {
-			if (!neuron.isConnectedToOutput())
-				continue;
-
-			Color colour;
-			double state = neuron.getLastState();
-			if (state > 0) {
-				state = state > 1 ? 1 : state;
-				colour = new Color(
-						30, (int) (50 + state * 150), 30
-				);
-			} else if (state < 0) {
-				state = state < -1 ? -1 : state;
-				colour = new Color(
-						(int) (50 - state * 150), 30, 30
-				);
-			} else {
-				colour = new Color(10, 10, 10);
-			}
-
-			g.setColor(colour);
-			g.fillOval(
-					neuron.getGraphicsX() - r,
-					neuron.getGraphicsY() - r,
-					2*r,
-					2*r);
-
-
-			if (simulation.inDebugMode())
-				if (neuron.getType().equals(Neuron.Type.HIDDEN))
-					g.setColor(Color.YELLOW.darker());
-				else if (neuron.getType().equals(Neuron.Type.SENSOR))
-					g.setColor(Color.BLUE.brighter());
-				else
-					g.setColor(Color.WHITE.darker());
-			else {
-				g.setColor(Color.WHITE.darker());
-			}
-			if (neuron.getDepth() == networkDepth && neuron.getType().equals(Neuron.Type.HIDDEN))
-				g.setColor(new Color(150, 30, 150));
-
-			Stroke s = g.getStroke();
-			g.setStroke(new BasicStroke((int) (0.3*r)));
-
-			g.drawOval(
-					neuron.getGraphicsX() - r,
-					neuron.getGraphicsY() - r,
-					2*r,
-					2*r);
-			g.setStroke(s);
-		}
-
-
-		Vector2 mousePos = window.getCurrentMousePosition();
-		int mouseX = (int) mousePos.x;
-		int mouseY = (int) mousePos.y;
-		if (boxXStart - 2*r < mouseX && mouseX < boxXStart + boxWidth + 2*r &&
-				boxYStart - 2*r < mouseY && mouseY < boxYStart + boxHeight + 2*r) {
-			for (Neuron neuron : nn.getNeurons()) {
-				int x = neuron.getGraphicsX();
-				int y = neuron.getGraphicsY();
-				if (simulation.inDebugMode()) {
-					g.setColor(Color.YELLOW.darker());
-					g.drawRect(x - 2*r, y - 2*r, 4*r, 4*r);
-					g.setColor(Color.RED);
-					int r2 = r / 5;
-					g.drawOval(mouseX - r2, mouseY - r2, 2*r2, 2*r2);
-				}
-				if (neuron.getLabel() != null &&
-						x - 2*r <= mouseX && mouseX <= x + 2*r &&
-						y - 2*r <= mouseY && mouseY <= y + 2*r) {
-					String labelStr = neuron.getLabel() + " = " + TextStyle.numberToString(neuron.getLastState(), 2);
-					TextObject label = new TextObject(labelStr, infoTextSize);
-					label.setColor(Color.WHITE.darker());
-					int labelX = x - label.getWidth() / 2;
-					int pad = (int) (infoTextSize * 0.3);
-					int infoWidth = label.getWidth() + 2*pad;
-					if (labelX + infoWidth >= window.getWidth())
-						labelX = (int) (window.getWidth() - 1.1 * infoWidth);
-
-					int labelY = (int) (y - 1.1 * r - label.getHeight() / 2);
-					label.setPosition(new Vector2(labelX, labelY));
-
-					g.setColor(Color.BLACK);
-					g.fillRoundRect(labelX - pad, labelY - 2*pad - label.getHeight() / 2,
-							infoWidth, label.getHeight() + pad,
-							pad, pad);
-					g.setColor(Color.WHITE.darker());
-					label.render(g);
-				}
-			}
-		}
-	}
-
-	private void precomputeGraphicsPositions(NeuralNetwork nn,
-											 int boxXStart,
-											 int boxYStart,
-											 int boxWidth,
-											 int boxHeight) {
-		Neuron[] neurons = nn.getNeurons();
-		int networkDepth = nn.calculateDepth();
-
-		int[] depthWidthValues = new int[networkDepth + 1];
-		Arrays.fill(depthWidthValues, 0);
-		for (Neuron n : neurons)
-			if (n.isConnectedToOutput())
-				depthWidthValues[n.getDepth()]++;
-
-		int maxWidth = 0;
-		for (int width : depthWidthValues)
-			maxWidth = Math.max(maxWidth, width);
-
-		int nodeSpacing = boxHeight / maxWidth;
-		nn.setGraphicsNodeSpacing(nodeSpacing);
-
-		for (int depth = 0; depth <= networkDepth; depth++) {
-			int x = boxXStart + depth * boxWidth / networkDepth;
-			int nNodes = depthWidthValues[depth];
-
-			int i = 0;
-			for (Neuron n : neurons) {
-				if (n.getDepth() == depth && n.isConnectedToOutput()) {
-					int y = (int) (boxYStart + nodeSpacing / 2f + boxHeight / 2f - (nNodes / 2f - i) * nodeSpacing);
-					n.setGraphicsPosition(x, y);
-					i++;
-				}
-			}
-		}
-		nn.setComputedGraphicsPositions(true);
-	}
-
-	@Override
-	public void stateChanged(ChangeEvent e) {
-		System.out.println("change event");
-	}
+package protoevo.core
+
+import protoevo.biology.NNBrain
+import protoevo.biology.Protozoan
+import protoevo.neat.NeuralNetwork
+import protoevo.neat.Neuron
+import protoevo.utils.TextObject
+import protoevo.utils.TextStyle
+import protoevo.utils.TextStyle.Companion.numberToString
+import protoevo.utils.Vector2
+import protoevo.utils.Window
+import java.awt.BasicStroke
+import java.awt.Color
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.util.*
+import javax.swing.JLabel
+import javax.swing.JSlider
+import javax.swing.event.ChangeEvent
+import javax.swing.event.ChangeListener
+
+class UI(private val window: Window, private val simulation: Simulation, private val renderer: Renderer) :
+    ChangeListener {
+    private val title: TextObject
+    private val creatingTank: TextObject
+    private val info: ArrayList<TextObject>
+    private val debugInfo: ArrayList<TextObject>
+    private val infoTextSize: Int
+    private val textAwayFromEdge: Int
+    private var showFPS = Settings.showFPS
+
+    init {
+        title = TextObject(
+            "Evolving Protozoa",
+            TextStyle.fontName,
+            window.height / 20,
+            Vector2(window.width / 60f, window.height / 15f)
+        )
+        title.color = Color.WHITE
+        info = ArrayList()
+        infoTextSize = window.height / 50
+        val pelletText = TextObject("Number of pellets: ", infoTextSize)
+        pelletText.color = Color.WHITE.darker()
+        val protozoaText = TextObject("Number of protozoa: ", infoTextSize)
+        protozoaText.color = Color.WHITE.darker()
+        val trackingFitness = TextObject("Generation", infoTextSize)
+        trackingFitness.color = Color.WHITE.darker()
+        info.add(protozoaText)
+        info.add(pelletText)
+        info.add(trackingFitness)
+        val fpsText = TextObject(
+            "FPS: ",
+            infoTextSize,
+            Vector2(window.width * 0.9f, window.height / 20f)
+        )
+        fpsText.color = Color.YELLOW.darker()
+        debugInfo = ArrayList()
+        debugInfo.add(fpsText)
+        textAwayFromEdge = window.width / 60
+        creatingTank = TextObject(
+            "Generating Initial Tank...", infoTextSize,
+            Vector2(textAwayFromEdge.toFloat(), getYPosLHS(1))
+        )
+        creatingTank.color = Color.WHITE.darker()
+
+        //Create the slider
+        val framesPerSecond = JSlider(
+            JSlider.VERTICAL,
+            10, 60, 30
+        )
+        framesPerSecond.addChangeListener(this)
+        framesPerSecond.majorTickSpacing = 10
+        framesPerSecond.paintTicks = true
+
+        //Create the label table
+        val labelTable = Hashtable<Int, JLabel>(3)
+        labelTable[0] = JLabel("Stop")
+        labelTable[60 / 10] = JLabel("Slow")
+        labelTable[60] = JLabel("Fast")
+        framesPerSecond.labelTable = labelTable
+        framesPerSecond.paintLabels = true
+    }
+
+    fun getYPosLHS(i: Int): Float {
+        return 1.3f * infoTextSize * i + 3 * window.height / 20f
+    }
+
+    fun getYPosRHS(i: Int): Float {
+        return 1.3f * infoTextSize * i + window.height / 20f
+    }
+
+    private fun renderStats(g: Graphics2D, lineNumber: Int, stats: Map<String, Float>): Int {
+        var lineNumber = lineNumber
+        for ((key, value) in stats) {
+            val text = key + ": " + numberToString(value, 2)
+            val statText = TextObject(
+                text, infoTextSize,
+                Vector2(textAwayFromEdge.toFloat(), getYPosLHS(lineNumber))
+            )
+            statText.color = Color.WHITE.darker()
+            statText.render(g)
+            lineNumber++
+        }
+        return lineNumber
+    }
+
+    fun render(g: Graphics2D) {
+        title.render(g)
+        var lineNumber = 0
+        if (!simulation.tank!!.hasBeenInitialised()) {
+            creatingTank.render(g)
+            return
+        }
+        var tracked = renderer.tracked
+        if (tracked == null) {
+            val tankStats = simulation.tank!!.stats
+            lineNumber = renderStats(g, lineNumber, tankStats)
+        } else {
+            lineNumber = 0
+            while (lineNumber < info.size) {
+                info[lineNumber].position = Vector2(textAwayFromEdge.toFloat(), getYPosLHS(lineNumber))
+                lineNumber++
+            }
+            info[0].text = "Number of pellets: " + simulation.tank!!.numberOfPellets()
+            info[0].render(g)
+            info[1].text = "Number of protozoa: " + simulation.tank!!.numberOfProtozoa()
+            info[1].render(g)
+            //			lineNumber++;
+            if (tracked.isDead && !tracked.children.isEmpty()) {
+                renderer.track(tracked.children.iterator().next())
+                tracked = renderer.tracked
+            }
+            val statsTitle = TextObject(
+                tracked!!.prettyName + " Stats", (infoTextSize * 1.1).toInt(),
+                Vector2(textAwayFromEdge.toFloat(), getYPosLHS(lineNumber))
+            )
+            statsTitle.color = Color.WHITE.darker()
+            statsTitle.render(g)
+            lineNumber++
+            renderStats(g, lineNumber++, tracked.stats)
+            if (tracked is Protozoan && tracked.brain is NNBrain) {
+                val brain = tracked.brain as NNBrain
+                renderBrainNetwork(brain.network, g)
+            }
+        }
+        renderDebugStats(g)
+    }
+
+    fun toggleShowFPS() {
+        showFPS = !showFPS
+    }
+
+    private fun renderDebugStats(g: Graphics2D) {
+        if (!simulation.inDebugMode() && !showFPS) return
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        var lineNumber = 0
+        val stats = renderer.stats
+        val statTexts = arrayOfNulls<TextObject>(stats.keys.size)
+        var maxWidth = 0
+        for ((key, value) in stats) {
+            val text = key + ": " + numberToString(value.toFloat(), 2)
+            val statText = TextObject(
+                text, infoTextSize,
+                Vector2(0f, getYPosRHS(lineNumber))
+            )
+            maxWidth = Math.max(maxWidth, statText.width)
+            statText.color = Color.YELLOW.darker()
+            statTexts[lineNumber] = statText
+            lineNumber++
+        }
+        val x = (0.98 * window.width - maxWidth).toInt()
+        for (statText in statTexts) {
+            val y = statText!!.position.y.toInt()
+            statText.position = Vector2(x.toFloat(), y.toFloat())
+            if (simulation.inDebugMode() || showFPS && statText.text!!.contains("FPS")) statText.render(g)
+        }
+        if (renderer.antiAliasing) g.setRenderingHint(
+            RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON
+        ) else g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+    }
+
+    private fun renderBrainNetwork(nn: NeuralNetwork, g: Graphics2D) {
+        val networkDepth = nn.depth
+        val boxWidth = (window.width / 2.0 - 1.2 * renderer.trackingScopeRadius).toInt()
+        val boxHeight = 3 * window.height / 4
+        val boxXStart = window.width - (boxWidth * 1.1).toInt()
+        val boxYStart = (window.height - boxHeight) / 2
+        if (simulation.inDebugMode()) {
+            g.color = Color.YELLOW.darker()
+            g.drawRect(boxXStart, boxYStart, boxWidth, boxHeight)
+            var y = boxYStart
+            while (y < boxYStart + boxHeight) {
+                g.drawLine(boxXStart, y, boxXStart + boxWidth, y)
+                y += boxHeight / networkDepth
+            }
+        }
+        if (!nn.hasComputedGraphicsPositions()) precomputeGraphicsPositions(
+            nn,
+            boxXStart,
+            boxYStart,
+            boxWidth,
+            boxHeight
+        )
+        val r = nn.graphicsNodeSpacing / 8
+        for (neuron in nn.neurons) {
+            if (neuron.type != Neuron.Type.SENSOR && neuron.isConnectedToOutput) {
+                val s = g.stroke
+                for (i in neuron.inputs.indices) {
+                    val inputNeuron = neuron.inputs[i]
+                    val weight = inputNeuron.lastState * neuron.weights[i]
+                    if (Math.abs(weight) <= 1e-4) continue
+                    if (weight > 0) {
+                        val p: Float = if (weight > 1) 1F else weight
+                        g.color = Color((240 - 100 * p).toInt(), 240, (255 - 100 * p).toInt())
+                    } else if (weight < 0) {
+                        val p: Float = if (weight < -1) 1F else -weight
+                        g.color = Color(
+                            240, (240 - 100 * p).toInt(), (255 - 100 * p).toInt()
+                        )
+                    } else {
+                        g.color = Color(240, 240, 240)
+                    }
+                    g.stroke = BasicStroke((r * Math.abs(weight)).toInt().toFloat())
+                    if (neuron === inputNeuron) {
+                        g.drawOval(
+                            neuron.graphicsX,
+                            neuron.graphicsY - 2 * r,
+                            3 * r,
+                            3 * r
+                        )
+                    } else if (inputNeuron.depth == neuron.depth) {
+                        val width = boxWidth / (2 * networkDepth)
+                        val height = Math.abs(neuron.graphicsY - inputNeuron.graphicsY)
+                        val x = neuron.graphicsX - width / 2
+                        val y = Math.min(neuron.graphicsY, inputNeuron.graphicsY)
+                        g.drawArc(x, y, width, height, -90, 180)
+                    } else {
+                        g.drawLine(
+                            neuron.graphicsX, neuron.graphicsY,
+                            inputNeuron.graphicsX, inputNeuron.graphicsY
+                        )
+                    }
+                }
+                g.stroke = s
+            }
+        }
+        for (neuron in nn.neurons) {
+            if (!neuron.isConnectedToOutput) continue
+            var colour: Color
+            var state = neuron.lastState.toDouble()
+            if (state > 0) {
+                state = if (state > 1) 1.0 else state
+                colour = Color(
+                    30, (50 + state * 150).toInt(), 30
+                )
+            } else if (state < 0) {
+                state = if (state < -1) -1.0 else state
+                colour = Color(
+                    (50 - state * 150).toInt(), 30, 30
+                )
+            } else {
+                colour = Color(10, 10, 10)
+            }
+            g.color = colour
+            g.fillOval(
+                neuron.graphicsX - r,
+                neuron.graphicsY - r,
+                2 * r,
+                2 * r
+            )
+            if (simulation.inDebugMode()) if (neuron.type == Neuron.Type.HIDDEN) g.color =
+                Color.YELLOW.darker() else if (neuron.type == Neuron.Type.SENSOR) g.color =
+                Color.BLUE.brighter() else g.color = Color.WHITE.darker() else {
+                g.color = Color.WHITE.darker()
+            }
+            if (neuron.depth == networkDepth && neuron.type == Neuron.Type.HIDDEN) g.color = Color(150, 30, 150)
+            val s = g.stroke
+            g.stroke = BasicStroke((0.3 * r).toInt().toFloat())
+            g.drawOval(
+                neuron.graphicsX - r,
+                neuron.graphicsY - r,
+                2 * r,
+                2 * r
+            )
+            g.stroke = s
+        }
+        val mousePos = window.currentMousePosition
+        val mouseX = mousePos.x.toInt()
+        val mouseY = mousePos.y.toInt()
+        if (boxXStart - 2 * r < mouseX && mouseX < boxXStart + boxWidth + 2 * r && boxYStart - 2 * r < mouseY && mouseY < boxYStart + boxHeight + 2 * r) {
+            for (neuron in nn.neurons) {
+                val x = neuron.graphicsX
+                val y = neuron.graphicsY
+                if (simulation.inDebugMode()) {
+                    g.color = Color.YELLOW.darker()
+                    g.drawRect(x - 2 * r, y - 2 * r, 4 * r, 4 * r)
+                    g.color = Color.RED
+                    val r2 = r / 5
+                    g.drawOval(mouseX - r2, mouseY - r2, 2 * r2, 2 * r2)
+                }
+                if (neuron.label != null && x - 2 * r <= mouseX && mouseX <= x + 2 * r && y - 2 * r <= mouseY && mouseY <= y + 2 * r) {
+                    val labelStr = neuron.label + " = " + numberToString(neuron.lastState, 2)
+                    val label = TextObject(labelStr, infoTextSize)
+                    label.color = Color.WHITE.darker()
+                    var labelX = x - label.width / 2
+                    val pad = (infoTextSize * 0.3).toInt()
+                    val infoWidth = label.width + 2 * pad
+                    if (labelX + infoWidth >= window.width) labelX = (window.width - 1.1 * infoWidth).toInt()
+                    val labelY = (y - 1.1 * r - label.height / 2).toInt()
+                    label.position = Vector2(labelX.toFloat(), labelY.toFloat())
+                    g.color = Color.BLACK
+                    g.fillRoundRect(
+                        labelX - pad, labelY - 2 * pad - label.height / 2,
+                        infoWidth, label.height + pad,
+                        pad, pad
+                    )
+                    g.color = Color.WHITE.darker()
+                    label.render(g)
+                }
+            }
+        }
+    }
+
+    private fun precomputeGraphicsPositions(
+        nn: NeuralNetwork,
+        boxXStart: Int,
+        boxYStart: Int,
+        boxWidth: Int,
+        boxHeight: Int
+    ) {
+        val neurons = nn.neurons
+        val networkDepth = nn.calculateDepth()
+        val depthWidthValues = IntArray(networkDepth + 1)
+        Arrays.fill(depthWidthValues, 0)
+        for (n in neurons) if (n.isConnectedToOutput) depthWidthValues[n.depth]++
+        var maxWidth = 0
+        for (width in depthWidthValues) maxWidth = Math.max(maxWidth, width)
+        val nodeSpacing = boxHeight / maxWidth
+        nn.graphicsNodeSpacing = nodeSpacing
+        for (depth in 0..networkDepth) {
+            val x = boxXStart + depth * boxWidth / networkDepth
+            val nNodes = depthWidthValues[depth]
+            var i = 0
+            for (n in neurons) {
+                if (n.depth == depth && n.isConnectedToOutput) {
+                    val y = (boxYStart + nodeSpacing / 2f + boxHeight / 2f - (nNodes / 2f - i) * nodeSpacing).toInt()
+                    n.setGraphicsPosition(x, y)
+                    i++
+                }
+            }
+        }
+        nn.setComputedGraphicsPositions(true)
+    }
+
+    override fun stateChanged(e: ChangeEvent) {
+        println("change event")
+    }
 }
