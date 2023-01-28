@@ -1,797 +1,646 @@
-package protoevo.core;
-
-import java.awt.*;
-import java.awt.image.BufferStrategy;
-import java.util.*;
-
-import protoevo.biology.*;
-import protoevo.env.ChemicalSolution;
-import protoevo.env.Rock;
-import protoevo.env.Tank;
-import protoevo.utils.Utils;
-import protoevo.utils.Vector2;
-import protoevo.utils.Window;
-
-public class Renderer extends Canvas
-{	
-	private static final long serialVersionUID = 1L;
-	
-	float time = 0;
-	private final Vector2 tankRenderCoords;
-	private final float tankRenderRadius;
-	private Vector2 pan, panPosTemp;
-	private float zoom;
-	private float targetZoom;
-	private final float initialZoom = 1;
-	private double zoomRange = 5, zoomSlowness = 8;
-	private boolean superSimpleRender = false, renderChemicals = true;
-	private boolean advancedDebugInfo = false;
-	private final float rotate = 0;
-	private double lastFPSTime = 0;
-	private int framesRendered = 0;
-	private Cell track;
-	private final UI ui;
-	private boolean showUI = true;
-	public boolean antiAliasing = Settings.antiAliasing;
-
-	private final HashMap<String, Integer> stats = new HashMap<>(5, 1);
-	private final Simulation simulation;
-	private final Window window;
-	private final int microscopePolygonNPoints = 500;
-	private int microscopePolygonXPoints[] = new int[microscopePolygonNPoints];
-	private int microscopePolygonYPoints[] = new int[microscopePolygonNPoints];
-
-	public Renderer(Simulation simulation, Window window)
-	{
-		this.simulation = simulation;
-		this.window = window;
-		window.input.onLeftMouseRelease = this::updatePanTemp;
-
-		stats.put("FPS", 0);
-		stats.put("Chunks Rendered", 0);
-		stats.put("Protozoa Rendered", 0);
-		stats.put("Pellets Rendered", 0);
-		stats.put("Broad Collision", 0);
-		stats.put("Broad Interact", 0);
-		stats.put("Zoom", 0);
-		
-		tankRenderRadius = window.getHeight() / 2.0f;
-		tankRenderCoords = new Vector2(window.getWidth()*0.5f, window.getHeight()*0.5f);
-		pan = new Vector2(0, 0);
-		panPosTemp = pan;
-
-		zoom = 1f;
-		targetZoom = zoom;
-		zoomRange *= simulation.getTank().getRadius();
-
-		
-		ui = new UI(window, simulation, this);
-		
-		requestFocus();
-		setFocusable(true);
-		lastFPSTime = Utils.getTimeSeconds();
-	}
-	
-	public void retina(Graphics2D g, Protozoan p)
-	{
-		Vector2 pos = toRenderSpace(p.pos);
-		float r = toRenderSpace(p.getRadius());
-		
-		Color c = p.getColor();
-
-		float dt 	= p.getRetina().getCellAngle();
-		float fov 	= p.getRetina().getFov();
-		float t0 	= -p.dir.angle() - 0.5f*fov - rotate;
-		float t 	= t0;
-		
-		g.setColor(c.darker());
-		g.fillArc(
-				(int)(pos.x - r),
-				(int)(pos.y - r),
-				(int)(2*r), 
-				(int)(2*r),
-				(int) Math.toDegrees(t0  - 2.8*dt), 
-				(int) Math.toDegrees(fov + 5.6*dt));
-
-		if (stats.get("FPS") >= 0) {
-			float constructionProgress = p.getRetina().getHealth();
-			for (Retina.Cell cell : p.getRetina()) {
-				if (cell.anythingVisible()) {
-					Color col = cell.getColour();
-					g.setColor(col);
-				} else {
-					if (constructionProgress < 1)
-						g.setColor(new Color(255, 255, 255, (int) (255 * constructionProgress)));
-					else
-						g.setColor(Color.WHITE);
-				}
-				g.fillArc(
-						(int) (pos.x - r),
-						(int) (pos.y - r),
-						(int) (2 * r),
-						(int) (2 * r),
-						(int) Math.toDegrees(t - 0.01),
-						(int) Math.toDegrees(dt + 0.01));
-				t += dt;
-			}
-		}
-		
-		g.setColor(c.darker());
-		g.fillArc(
-				(int)(pos.x - 0.8*r),
-				(int)(pos.y - 0.8*r),
-				(int)(2*0.8*r), 
-				(int)(2*0.8*r),
-				(int) Math.toDegrees(t0  - 3*dt), 
-				(int) Math.toDegrees(fov + 6*dt));
-		
-		g.setColor(c);
-		g.fillOval(
-				(int)(pos.x - 0.75*r),
-				(int)(pos.y - 0.75*r),
-				(int)(2*0.75*r), 
-				(int)(2*0.75*r));
-
-		if (p == track && simulation.inDebugMode()) {
-			g.setColor(Color.YELLOW.darker());
-			float dirAngle = p.dir.angle();
-			for (Retina.Cell cell : p.getRetina().getCells()) {
-				for (Vector2 ray : cell.getRays()) {
-					Vector2 rayRotated = ray.rotate(dirAngle);
-					Vector2 rayDir = rayRotated.unit().scale(toRenderSpace(Settings.protozoaInteractRange));
-					Vector2 rayStart = pos.add(rayRotated.unit().scale(r));
-					Vector2 rayEnd = pos.add(rayDir);
-					g.drawLine(
-							(int) rayStart.x, (int) rayStart.y,
-							(int) rayEnd.x, (int) rayEnd.y);
-				}
-			}
-		}
-	}
-	
-	public void protozoa(Graphics2D g, Protozoan p)
-	{
-		Vector2 pos = toRenderSpace(p.pos);
-		float r = toRenderSpace(p.getRadius());
-
-		if (circleNotVisible(pos, r))
-			return;
-		if (!p.wasJustDamaged) {
-			drawOutlinedCircle(g, pos, r, p.getColor());
-		} else {
-			drawOutlinedCircle(g, pos, r, p.getColor(), Color.RED);
-		}
-
-		for (Protozoan.Spike spike : p.spikes) {
-			if (r > 0.001 * window.getHeight()) {
-				Stroke s = g.getStroke();
-				g.setColor(p.getColor().darker().darker());
-				g.setStroke(new BasicStroke((int) (r * 0.2)));
-				Vector2 spikeStartPos = p.dir.unit().rotate(spike.angle).setLength(r).translate(pos);
-				float spikeLen = toRenderSpace(p.getSpikeLength(spike));
-				Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen));
-				g.drawLine((int) (spikeStartPos.x), (int) (spikeStartPos.y),
-						(int) (spikeEndPos.x), (int) (spikeEndPos.y));
-				g.setStroke(s);
-			}
-		}
-
-		stats.put("Protozoa Rendered", stats.get("Protozoa Rendered") + 1);
-
-		if (r >= 0.005 * window.getHeight() && p.getRetina().numberOfCells() > 0)
-			retina(g, p);
-
-		if (stats.get("FPS") > 10 && r >= 10) {
-			if (p.isHarbouringCrossover()) {
-				Polygon nucleus = new Polygon();
-				float dt = (float) (2 * Math.PI / (7.0));
-				float t0 = p.getVel().angle();
-				Random random = new Random(p.id + p.getMate().id);
-				for (float t = 0; t < 2 * Math.PI; t += dt) {
-					float percent = 0.1f + 0.2f * random.nextFloat();
-					float radius = toRenderSpace(percent * p.getRadius());
-					int x = (int) (radius * (0.1 + Math.cos(t + t0)) + pos.x);
-					int y = (int) (radius * (-0.1 + Math.sin(t + t0)) + pos.y);
-					nucleus.addPoint(x, y);
-				}
-				Color b = p.getMate().getColor().brighter();
-				g.setColor(new Color(b.getRed(), b.getGreen(), b.getBlue(), 50));
-				g.fillPolygon(nucleus);
-			}
-			Color b = p.getColor().brighter();
-			fillCircle(g, pos, 3 * r / 7f, new Color(b.getRed(), b.getGreen(), b.getBlue(), 50));
-		}
-	}
-
-	public boolean circleNotVisible(Vector2 pos, float r) {
-		return (pos.x - r > window.getWidth())
-			 ||(pos.x + r < 0)
-			 ||(pos.y - r > window.getHeight())
-			 ||(pos.y + r < 0);
-	}
-
-	public boolean pointNotVisible(Vector2 pos) {
-		return circleNotVisible(pos, 0);
-	}
-
-	public void drawCircle(Graphics2D g, Vector2 pos, float r, Color c) {
-		drawCircle(g, pos, r, c, (int) (0.2*r));
-	}
-
-	public void drawCircle(Graphics2D g, Vector2 pos, float r, Color c, int strokeSize) {
-		g.setColor(c);
-		Stroke s = g.getStroke();
-		g.setStroke(new BasicStroke(strokeSize));
-		g.drawOval(
-				(int)(pos.x - r),
-				(int)(pos.y - r),
-				(int)(2*r),
-				(int)(2*r));
-		g.setStroke(s);
-	}
-
-	public void fillCircle(Graphics2D g, Vector2 pos, float r, Color c) {
-		g.setColor(c);
-		g.fillOval(
-				(int)(pos.x - r),
-				(int)(pos.y - r),
-				(int)(2*r),
-				(int)(2*r));
-	}
-
-	public void drawOutlinedCircle(Graphics2D g, Vector2 pos, float r, Color c, Color outline) {
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		g.setColor(c);
-
-		if (r <= 3) {
-			int l = Math.max((int) r, 1);
-			g.fillRect(
-					(int)(pos.x - l),
-					(int)(pos.y - l),
-					(int)(2*l),
-					(int)(2*l));
-		}
-		else {
-			g.fillOval(
-					(int)(pos.x - r),
-					(int)(pos.y - r),
-					(int)(2*r),
-					(int)(2*r));
-		}
-
-		if (antiAliasing)
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		else
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
-		if (r >= 10 && !superSimpleRender)
-			drawCircle(g, pos, r, outline);
-	}
-
-	public void drawOutlinedCircle(Graphics2D g, Vector2 pos, float r, Color c) {
-		drawOutlinedCircle(g, pos, r, c, c.darker());
-	}
-
-	public void drawOutlinedCircle(Graphics2D g, Vector2 pos, float r, Color c, float edgeAlpha) {
-		Color edgeColour = c.darker();
-		if (edgeAlpha < 1)
-			edgeColour = new Color(
-					edgeColour.getRed(), edgeColour.getGreen(), edgeColour.getBlue(), (int) (255 * edgeAlpha)
-			);
-		drawOutlinedCircle(g, pos, r, c, edgeColour);
-	}
-	
-	public void pellet(Graphics2D g, EdibleCell p)
-	{
-		Vector2 pos = toRenderSpace(p.pos);
-		float r = toRenderSpace(p.getRadius());
-		drawOutlinedCircle(g, pos, r, p.getColor());
-		if (simulation.inDebugMode())
-			stats.put("Pellets Rendered", stats.get("Pellets Rendered") + 1);
-	}
-
-	public void renderEntity(Graphics2D g, Cell e) {
-		if (e instanceof Protozoan)
-			protozoa(g, (Protozoan) e);
-		else if (e instanceof EdibleCell)
-			pellet(g, (EdibleCell) e);
-	}
-
-	public boolean pointOnScreen(int x, int y) {
-		return 0 <= x && x <= window.getWidth() &&
-			   0 <= y && y <= window.getHeight();
-	}
-
-	public boolean squareInView(Vector2 origin, int size) {
-		int originX = (int) origin.x;
-		int originY = (int) origin.y;
-		return pointOnScreen(originX, originY) ||
-				pointOnScreen(originX + size, originY) ||
-				pointOnScreen(originX, originY + size) ||
-				pointOnScreen(originX + size, originY + size);
-	}
-
-	public boolean chunkInView(Chunk chunk) {
-		Vector2 chunkCoords = toRenderSpace(chunk.getTankCoords());
-		int chunkSize = toRenderSpace(simulation.getTank().getChunkManager().getChunkSize());
-		return squareInView(chunkCoords, chunkSize);
-	}
-
-	public void renderChunk(Graphics2D g, Chunk chunk) {
-		if (chunkInView(chunk)) {
-			if (simulation.inDebugMode())
-				stats.put("Chunks Rendered", stats.get("Chunks Rendered") + 1);
-			for (Cell e : chunk.getCells())
-				renderEntity(g, e);
-		}
-	}
-
-	public void renderEntityAttachments(Graphics2D g, Cell e) {
-		float r1 = toRenderSpace(e.getRadius());
-		Vector2 ePos = toRenderSpace(e.pos);
-		if (circleNotVisible(ePos, r1) || e.getCellBindings().isEmpty())
-			return;
-
-		Color eColor = e.getColor();
-		int red = eColor.getRed();
-		int green = eColor.getGreen();
-		int blue = eColor.getBlue();
-
-		for (CellAdhesion.CellBinding binding : e.getCellBindings()) {
-			Cell attached = binding.getDestinationEntity();
-			float r2 = toRenderSpace(attached.getRadius());
-			float r = Math.min(r1, r2);
-			Stroke s = g.getStroke();
-			g.setStroke(new BasicStroke(1.5f * r));
-			Vector2 attachedPos = toRenderSpace(attached.pos);
-			Color attachedColor = attached.getColor();
-			g.setColor(new Color(
-					(red + attachedColor.getRed()) / 2,
-					(green + attachedColor.getGreen()) / 2,
-					(blue + attachedColor.getBlue()) / 2
-			).brighter());
-			g.drawLine((int) ePos.x, (int) ePos.y,
-					(int) attachedPos.x, (int) attachedPos.y);
-			g.setStroke(s);
-		}
-	}
-	
-	public void entities(Graphics2D g, Tank tank)
-	{
-		for (Chunk chunk : tank.getChunkManager().getChunks())
-			for (Cell e : chunk.getCells())
-				renderEntityAttachments(g, e);
-		for (Chunk chunk : tank.getChunkManager().getChunks())
-			renderChunk(g, chunk);
-
-		if (simulation.inDebugMode() && track != null) {
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
-			ChunkManager chunkManager = tank.getChunkManager();
-			Iterator<Collidable> collisionEntities = chunkManager.broadCollisionDetection(
-                    track.pos, track.getRadius());
-			collisionEntities.forEachRemaining(
-					o -> {
-						stats.put("Broad Collision", 1 + stats.getOrDefault("Broad Collision", 0));
-						drawCollisionBounds(g, o, Color.RED.darker());
-					}
-			);
-
-			if (track instanceof Protozoan) {
-				Protozoan p = (Protozoan) track;
-				drawCollisionBounds(g, track, p.getInteractRange(), Color.WHITE.darker());
-
-				Iterator<Cell> interactCells = chunkManager.broadEntityDetection(
-                        track.pos, p.getInteractRange());
-
-
-				while (interactCells.hasNext()) {
-					Cell cell = interactCells.next();
-					if (p.cullFromRayCasting(cell))
-						continue;
-					stats.put("Broad Interact", 1 + stats.getOrDefault("Broad Interact", 0));
-					drawCollisionBounds(g, cell, 1.1f * cell.getRadius(), Color.WHITE.darker());
-				}
-
-				for (Protozoan.ContactSensor sensor : p.contactSensors) {
-					Vector2 sensorPos = p.getSensorPosition(sensor);
-					fillCircle(g, toRenderSpace(sensorPos), 2, Color.WHITE.darker());
-				}
-			}
-
-			if (antiAliasing)
-				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			else
-				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		}
-	}
-
-	public void rocks(Graphics2D g, Tank tank) {
-
-		Vector2[] screenPoints = new Vector2[3];
-		int[] xPoints = new int[screenPoints.length];
-		int[] yPoints = new int[screenPoints.length];
-		for (Rock rock : tank.getRocks()) {
-			screenPoints[0] = toRenderSpace(rock.getPoints()[0]);
-			screenPoints[1] = toRenderSpace(rock.getPoints()[1]);
-			screenPoints[2] = toRenderSpace(rock.getPoints()[2]);
-
-			for (int i = 0; i < screenPoints.length; i++)
-				xPoints[i] = (int) screenPoints[i].x;
-
-			for (int i = 0; i < screenPoints.length; i++)
-				yPoints[i] = (int) screenPoints[i].y;
-
-			Color color = new Color(
-					rock.getColor().getRed(),
-					rock.getColor().getGreen(),
-					rock.getColor().getBlue(),
-					simulation.inDebugMode() ? 100 : 255
-			);
-			g.setColor(color);
-
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-			g.fillPolygon(xPoints, yPoints, screenPoints.length);
-
-			if (antiAliasing)
-				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			else
-				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
-			g.setColor(color.darker());
-			Stroke s = g.getStroke();
-			g.setStroke(new BasicStroke(toRenderSpace(0.02f * Settings.maxRockSize)));
-//			g.drawPolygon(xPoints, yPoints, screenPoints.length);
-			for (int i = 0; i < rock.getEdges().length; i++) {
-				if (rock.isEdgeAttached(i))
-					continue;
-				Vector2[] edge = rock.getEdge(i);
-				Vector2 start = toRenderSpace(edge[0]);
-				Vector2 end = toRenderSpace(edge[1]);
-				g.drawLine((int) start.x, (int) start.y,
-						   (int) end.x, (int) end.y);
-			}
-			g.setStroke(s);
-
-			if (simulation.inDebugMode()) {
-				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-				g.setColor(Color.YELLOW.darker());
-				for (int i = 0; i < 3; i++) {
-					Vector2[] edge = rock.getEdge(i);
-					Vector2 edgeCentre = edge[0].add(edge[1]).scale(0.5f);
-					Vector2 normalStart = edgeCentre;
-					Vector2 normalEnd = edgeCentre.add(rock.getNormals()[i].mul(0.005f));
-					Vector2 a = toRenderSpace(normalStart);
-					Vector2 b = toRenderSpace(normalEnd);
-					g.drawLine((int) a.x, (int) a.y, (int) b.x, (int) b.y);
-				}
-
-				if (antiAliasing)
-					g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-				else
-					g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-			}
-		}
-	}
-
-	public void drawCollisionBounds(Graphics2D g, Collidable collidable, Color color) {
-		if (collidable instanceof Cell) {
-			Cell e = (Cell) collidable;
-			drawCollisionBounds(g, e, e.getRadius(), color);
-		} else if (collidable instanceof Rock) {
-			drawCollisionBounds(g, (Rock) collidable, color);
-		}
-	}
-
-	public void drawCollisionBounds(Graphics2D g, Rock rock, Color color) {
-
-		Vector2[] screenPoints = new Vector2[]{
-			toRenderSpace(rock.getPoints()[0]),
-			toRenderSpace(rock.getPoints()[1]),
-			toRenderSpace(rock.getPoints()[2])
-		};
-
-		int[] xPoints = new int[screenPoints.length];
-		for (int i = 0; i < screenPoints.length; i++)
-			xPoints[i] = (int) screenPoints[i].x;
-
-		int[] yPoints = new int[screenPoints.length];
-		for (int i = 0; i < screenPoints.length; i++)
-			yPoints[i] = (int) screenPoints[i].y;
-
-		int strokeSize = 5;
-		Stroke s = g.getStroke();
-		g.setStroke(new BasicStroke(strokeSize));
-		g.setColor(color);
-		for (int i = 0; i < rock.getEdges().length; i++) {
-			if (rock.isEdgeAttached(i))
-				continue;
-			Vector2[] edge = rock.getEdge(i);
-			Vector2 start = toRenderSpace(edge[0]);
-			Vector2 end = toRenderSpace(edge[1]);
-			g.drawLine((int) start.x, (int) start.y,
-					   (int) end.x, (int) end.y);
-		}
-		g.setStroke(s);
-	}
-
-	public void drawCollisionBounds(Graphics2D g, Cell e, float r, Color color) {
-		Vector2 pos = toRenderSpace(e.pos);
-		r = toRenderSpace(r);
-		if (!circleNotVisible(pos, r))
-			drawCircle(g, pos, r, color, window.getHeight() / 500);
-	}
-	
-	public void maskTank(Graphics g, Vector2 coords, float r, int alpha)
-	{
-		
-		int n = microscopePolygonNPoints - 7;
-		for (int i = 0; i < n; i++) 
-		{
-			float t = (float) (2*Math.PI * i / (float) n);
-			microscopePolygonXPoints[i] = (int) (coords.x + r * Math.cos(t));
-			microscopePolygonYPoints[i] = (int) (coords.y + r * Math.sin(t));
-		}
-		
-		microscopePolygonXPoints[n] 	 = (int) (coords.x) + (int) r;
-		microscopePolygonYPoints[n]	 = (int) (coords.y);
-		
-		microscopePolygonXPoints[n+1] = window.getWidth();
-		microscopePolygonYPoints[n+1] = (int) (coords.y);
-		
-		microscopePolygonXPoints[n+2] = window.getWidth();
-		microscopePolygonYPoints[n+2] = 0;
-		
-		microscopePolygonXPoints[n+3] = 0;
-		microscopePolygonYPoints[n+3] = 0;
-		
-		microscopePolygonXPoints[n+4] = 0;
-		microscopePolygonYPoints[n+4] = window.getHeight();
-		
-		microscopePolygonXPoints[n+5] = window.getWidth();
-		microscopePolygonYPoints[n+5] = window.getHeight();
-		
-		microscopePolygonXPoints[n+6] = window.getWidth();
-		microscopePolygonYPoints[n+6] = (int) (coords.y);
-		
-		g.setColor(new Color(0, 0, 0, alpha));
-		g.fillPolygon(microscopePolygonXPoints, microscopePolygonYPoints, microscopePolygonNPoints);
-	}
-	
-	public void background(Graphics2D graphics)
-	{
-		time += 0.1;
-		int backgroundR = 25 + (int)(5 *Math.cos(time/100.0));
-		int backgroundG = 40 + (int)(30*Math.sin(time/100.0));
-		int backgroundB = 35 + (int)(15*Math.cos(time/100.0 + 1));
-		Color backgroundColour = new Color(backgroundR, backgroundG, backgroundB);
-		graphics.setColor(backgroundColour);
-
-		graphics.fillRect(0, 0, window.getWidth(), window.getHeight());
-
-		if (Settings.enableChemicalField && renderChemicals) {
-			if (antiAliasing)
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-			else
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-			ChemicalSolution chemicalSolution = simulation.getTank().getChemicalSolution();
-
-			int chemicalCellSize = toRenderSpace(chemicalSolution.getGridSize());
-
-			for (int i = 0; i < chemicalSolution.getNXChunks(); i++) {
-				for (int j = 0; j < chemicalSolution.getNYChunks(); j++) {
-
-					Vector2 chemicalCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i, j));
-					int x = (int) chemicalCellCoords.x;
-					int y = (int) chemicalCellCoords.y;
-
-					float density = chemicalSolution.getPlantPheromoneDensity(i, j);
-					if (density < 0.05f || !squareInView(chemicalCellCoords, chemicalCellSize))
-						continue;
-
-					float alpha = density / 2f;
-					int r = (int) (alpha * 80 + (1 - alpha) * backgroundR);
-					int g = (int) (alpha * 200 + (1 - alpha) * backgroundG);
-					int b = (int) (alpha * 60 + (1 - alpha) * backgroundB);
-					graphics.setColor(new Color(r, g, b));
-
-					Vector2 nextCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i+1, j+1));
-					int nextX = (int) nextCellCoords.x;
-					int nextY = (int) nextCellCoords.y;
-
-					graphics.fillRect(x, y, nextX - x, nextY - y);
-					if (simulation.inDebugMode() && advancedDebugInfo) {
-						graphics.setColor(Color.ORANGE.darker());
-						graphics.drawRect(x, y, chemicalCellSize, chemicalCellSize);
-					}
-				}
-			}
-			if (antiAliasing)
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			else
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		}
-
-		if (simulation.inDebugMode() && advancedDebugInfo) {
-			graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-			graphics.setColor(Color.YELLOW.darker());
-			ChunkManager chunkManager = simulation.getTank().getChunkManager();
-			int w = toRenderSpace(chunkManager.getChunkSize());
-			for (Chunk chunk : chunkManager.getChunks()) {
-				Vector2 chunkCoords = toRenderSpace(chunk.getTankCoords());
-				graphics.drawRect((int) chunkCoords.x, (int) chunkCoords.y, w, w);
-			}
-
-			if (antiAliasing)
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			else
-				graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-		}
-	}
-	
-	public void render()
-	{
-		int fps = stats.get("FPS");
-		stats.replaceAll((s, v) -> 0);
-		stats.put("FPS", fps);
-		double fpsDT = Utils.getTimeSeconds() - lastFPSTime;
-		if (fpsDT >= 1) {
-			stats.put("FPS", (int) (framesRendered / fpsDT));
-			framesRendered = 0;
-			lastFPSTime = Utils.getTimeSeconds();
-		}
-		superSimpleRender = stats.get("FPS") <= 10;
-
-		BufferStrategy bs = this.getBufferStrategy();
-		
-		if (bs == null) {
-			this.createBufferStrategy(3);
-			return;
-		}
-		
-		Graphics2D graphics = (Graphics2D) bs.getDrawGraphics();
-
-		if (antiAliasing)
-			graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		else
-			graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
-		graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
-		graphics.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
-		graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-		graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
-
-		zoom = targetZoom;
-		stats.put("Zoom", (int) (100 * zoom));
-		synchronized (simulation.getTank()) {
-			try {
-				background(graphics);
-				entities(graphics, simulation.getTank());
-				rocks(graphics, simulation.getTank());
-				maskTank(graphics,
-						tankRenderCoords,
-						getTracked() != null ? getTrackingScopeRadius() : tankRenderRadius,
-						simulation.inDebugMode() ? 150 : 200);
-				maskTank(graphics,
-						toRenderSpace(new Vector2(0, 0)),
-						tankRenderRadius * zoom,
-						simulation.inDebugMode() ? 100 : 255);
-
-				if (showUI)
-					ui.render(graphics);
-
-				graphics.dispose();
-				bs.show();
-				framesRendered++;
-
-			} catch (ConcurrentModificationException ignored) {}
-		}
-	}
-
-	public float getTankViewRadius() {
-		if (track != null)
-			return getTrackingScopeRadius();
-		return tankRenderRadius;
-	}
-
-	public Vector2 getTankViewCentre() {
-		return tankRenderCoords;
-	}
-
-	public float getTrackingScopeRadius() {
-		return 3*tankRenderRadius/4;
-	}
-	
-	public Vector2 toRenderSpace(Vector2 v)
-	{
-		if (track == null)
-			return v.copy()
-					.scale(1 / simulation.getTank().getRadius())
-					.translate(pan.mul(1 / tankRenderRadius))
-					.scale(tankRenderRadius * zoom)
-					.translate(tankRenderCoords);
-		else {
-			return v.copy()
-					.take(track.pos)
-//					.rotate(rotate)
-					.scale(tankRenderRadius * zoom / simulation.getTank().getRadius())
-					.translate(tankRenderCoords);
-		}
-	}
-	
-	public int toRenderSpace(float s)
-	{
-		return (int) (zoom * tankRenderRadius * s / simulation.getTank().getRadius());
-	}
-
-	public void setZoom(float d) {
-		targetZoom = (float) (initialZoom + zoomRange * (d - 1f) / zoomSlowness);
-		if (targetZoom < 0) {
-			pan = new Vector2(0, 0);
-			targetZoom = 0.01f;
-		}
-//		if (targetZoom > 20)
+package protoevo.core
+
+import protoevo.biology.Cell
+import protoevo.biology.EdibleCell
+import protoevo.biology.Protozoan
+import protoevo.core.Particle
+import protoevo.env.Rock
+import protoevo.env.Tank
+import protoevo.utils.Utils.timeSeconds
+import protoevo.utils.Vector2
+import protoevo.utils.Window
+import java.awt.*
+import java.util.*
+
+class Renderer(private val simulation: Simulation, private val window: Window) : Canvas() {
+    var time = 0f
+    val tankViewCentre: Vector2
+    private val tankRenderRadius: Float
+    private var pan: Vector2
+    private var panPosTemp: Vector2
+    private var zoom: Float
+    private var targetZoom: Float
+    private val initialZoom = 1f
+    private var zoomRange = 5.0
+    private val zoomSlowness = 8.0
+    private var superSimpleRender = false
+    private var renderChemicals = true
+    var isAdvancedDebugInfo = false
+        private set
+    private val rotate = 0f
+    private var lastFPSTime = 0.0
+    private var framesRendered = 0
+    var tracked: Cell? = null
+        private set
+    val uI: UI
+    private var showUI = true
+    var antiAliasing = Settings.antiAliasing
+    val stats = HashMap<String, Int>(5, 1f)
+    private val microscopePolygonNPoints = 500
+    private val microscopePolygonXPoints = IntArray(microscopePolygonNPoints)
+    private val microscopePolygonYPoints = IntArray(microscopePolygonNPoints)
+
+    init {
+        window.input.onLeftMouseRelease = Runnable { updatePanTemp() }
+        stats["FPS"] = 0
+        stats["Chunks Rendered"] = 0
+        stats["Protozoa Rendered"] = 0
+        stats["Pellets Rendered"] = 0
+        stats["Broad Collision"] = 0
+        stats["Broad Interact"] = 0
+        stats["Zoom"] = 0
+        tankRenderRadius = window.height / 2.0f
+        tankViewCentre = Vector2(window.width * 0.5f, window.height * 0.5f)
+        pan = Vector2(0f, 0f)
+        panPosTemp = pan
+        zoom = 1f
+        targetZoom = zoom
+        zoomRange *= simulation.tank!!.radius.toDouble()
+        uI = UI(window, simulation, this)
+        requestFocus()
+        isFocusable = true
+        lastFPSTime = timeSeconds
+    }
+
+    fun retina(g: Graphics2D, p: Protozoan) {
+        val pos = toRenderSpace(p.pos)
+        val r: Float = toRenderSpace(p.radius).toFloat()
+        val c = p.color
+        val dt = p.getRetina().cellAngle
+        val fov = p.getRetina().fov
+        val t0 = -p.dir.angle() - 0.5f * fov - rotate
+        var t = t0
+        g.color = c.darker()
+        g.fillArc(
+            (pos.x - r).toInt(),
+            (pos.y - r).toInt(),
+            (2 * r).toInt(),
+            (2 * r).toInt(),
+            Math.toDegrees(t0 - 2.8 * dt).toInt(),
+            Math.toDegrees(fov + 5.6 * dt).toInt()
+        )
+        if (stats["FPS"]!! >= 0) {
+            val constructionProgress = p.getRetina().health
+            for (cell in p.getRetina()) {
+                if (cell.anythingVisible()) {
+                    val col = cell.colour
+                    g.color = col
+                } else {
+                    if (constructionProgress < 1) g.color =
+                        Color(255, 255, 255, (255 * constructionProgress).toInt()) else g.color = Color.WHITE
+                }
+                g.fillArc(
+                    (pos.x - r).toInt(),
+                    (pos.y - r).toInt(),
+                    (2 * r).toInt(),
+                    (2 * r).toInt(),
+                    Math.toDegrees(t - 0.01).toInt(),
+                    Math.toDegrees(dt + 0.01).toInt()
+                )
+                t += dt
+            }
+        }
+        g.color = c.darker()
+        g.fillArc(
+            (pos.x - 0.8 * r).toInt(),
+            (pos.y - 0.8 * r).toInt(),
+            (2 * 0.8 * r).toInt(),
+            (2 * 0.8 * r).toInt(),
+            Math.toDegrees((t0 - 3 * dt).toDouble()).toInt(),
+            Math.toDegrees((fov + 6 * dt).toDouble()).toInt()
+        )
+        g.color = c
+        g.fillOval(
+            (pos.x - 0.75 * r).toInt(),
+            (pos.y - 0.75 * r).toInt(),
+            (2 * 0.75 * r).toInt(),
+            (2 * 0.75 * r).toInt()
+        )
+        if (p == tracked && simulation.inDebugMode()) {
+            g.color = Color.YELLOW.darker()
+            val dirAngle = p.dir.angle()
+            for (cell in p.getRetina().cells) {
+                for (ray in cell.rays) {
+                    val rayRotated = ray.rotate(dirAngle)
+                    val rayDir = rayRotated.unit().scale(toRenderSpace(Settings.protozoaInteractRange).toFloat())
+                    val rayStart = pos.add(rayRotated.unit().scale(r))
+                    val rayEnd = pos.add(rayDir)
+                    g.drawLine(rayStart.x.toInt(), rayStart.y.toInt(), rayEnd.x.toInt(), rayEnd.y.toInt())
+                }
+            }
+        }
+    }
+
+    fun protozoa(g: Graphics2D, p: Protozoan) {
+        val pos = toRenderSpace(p.pos)
+        val r: Float = toRenderSpace(p.radius).toFloat()
+        if (circleNotVisible(pos, r)) return
+        if (!p.wasJustDamaged) {
+            drawOutlinedCircle(g, pos, r, p.color)
+        } else {
+            drawOutlinedCircle(g, pos, r, p.color, Color.RED)
+        }
+        for (spike in p.spikes) {
+            if (r > 0.001 * window.height) {
+                val s = g.stroke
+                g.color = p.color.darker().darker()
+                g.stroke = BasicStroke((r * 0.2).toInt().toFloat())
+                val spikeStartPos = p.dir.unit().rotate(spike.angle).setLength(r).translate(pos)
+                val spikeLen = toRenderSpace(p.getSpikeLength(spike)).toFloat()
+                val spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen))
+                g.drawLine(
+                    spikeStartPos.x.toInt(),
+                    spikeStartPos.y.toInt(),
+                    spikeEndPos.x.toInt(),
+                    spikeEndPos.y.toInt()
+                )
+                g.stroke = s
+            }
+        }
+        stats["Protozoa Rendered"] = stats["Protozoa Rendered"]!! + 1
+        if (r >= 0.005 * window.height && p.getRetina().numberOfCells() > 0) retina(g, p)
+        if (stats["FPS"]!! > 10 && r >= 10) {
+            if (p.isHarbouringCrossover) {
+                val nucleus = Polygon()
+                val dt = (2 * Math.PI / 7.0).toFloat()
+                val t0 = p.getVel().angle()
+                val random = Random((p.id + p.mate!!.id).toLong())
+                var t = 0f
+                while (t < 2 * Math.PI) {
+                    val percent = 0.1f + 0.2f * random.nextFloat()
+                    val radius: Float = toRenderSpace(percent * p.radius).toFloat()
+                    val x = (radius * (0.1 + Math.cos((t + t0).toDouble())) + pos.x).toInt()
+                    val y = (radius * (-0.1 + Math.sin((t + t0).toDouble())) + pos.y).toInt()
+                    nucleus.addPoint(x, y)
+                    t += dt
+                }
+                val b = p.mate!!.color.brighter()
+                g.color = Color(b.red, b.green, b.blue, 50)
+                g.fillPolygon(nucleus)
+            }
+            val b = p.color.brighter()
+            fillCircle(g, pos, 3 * r / 7f, Color(b.red, b.green, b.blue, 50))
+        }
+    }
+
+    fun circleNotVisible(pos: Vector2, r: Float): Boolean {
+        return pos.x - r > window.width || pos.x + r < 0 || pos.y - r > window.height || pos.y + r < 0
+    }
+
+    fun pointNotVisible(pos: Vector2): Boolean {
+        return circleNotVisible(pos, 0f)
+    }
+
+    @JvmOverloads
+    fun drawCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color?, strokeSize: Int = (0.2 * r).toInt()) {
+        g.color = c
+        val s = g.stroke
+        g.stroke = BasicStroke(strokeSize.toFloat())
+        g.drawOval((pos.x - r).toInt(), (pos.y - r).toInt(), (2 * r).toInt(), (2 * r).toInt())
+        g.stroke = s
+    }
+
+    fun fillCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color?) {
+        g.color = c
+        g.fillOval((pos.x - r).toInt(), (pos.y - r).toInt(), (2 * r).toInt(), (2 * r).toInt())
+    }
+
+    @JvmOverloads
+    fun drawOutlinedCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color, outline: Color? = c.darker()) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        g.color = c
+        if (r <= 3) {
+            val l = Math.max(r.toInt(), 1)
+            g.fillRect(
+                (pos.x - l).toInt(), (pos.y - l).toInt(),
+                (2 * l),
+                (2 * l)
+            )
+        } else {
+            g.fillOval((pos.x - r).toInt(), (pos.y - r).toInt(), (2 * r).toInt(), (2 * r).toInt())
+        }
+        if (antiAliasing) g.setRenderingHint(
+            RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON
+        ) else g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        if (r >= 10 && !superSimpleRender) drawCircle(g, pos, r, outline)
+    }
+
+    fun drawOutlinedCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color, edgeAlpha: Float) {
+        var edgeColour = c.darker()
+        if (edgeAlpha < 1) edgeColour = Color(
+            edgeColour.red, edgeColour.green, edgeColour.blue, (255 * edgeAlpha).toInt()
+        )
+        drawOutlinedCircle(g, pos, r, c, edgeColour)
+    }
+
+    fun pellet(g: Graphics2D, p: EdibleCell) {
+        val pos = toRenderSpace(p.pos)
+        val r: Float = toRenderSpace(p.radius).toFloat()
+        drawOutlinedCircle(g, pos, r, p.color)
+        if (simulation.inDebugMode()) stats["Pellets Rendered"] = stats["Pellets Rendered"]!! + 1
+    }
+
+    fun renderEntity(g: Graphics2D, e: Cell?) {
+        if (e is Protozoan) protozoa(g, e) else if (e is EdibleCell) pellet(g, e)
+    }
+
+    fun pointOnScreen(x: Int, y: Int): Boolean {
+        return 0 <= x && x <= window.width && 0 <= y && y <= window.height
+    }
+
+    fun squareInView(origin: Vector2, size: Int): Boolean {
+        val originX = origin.x.toInt()
+        val originY = origin.y.toInt()
+        return pointOnScreen(originX, originY) ||
+                pointOnScreen(originX + size, originY) ||
+                pointOnScreen(originX, originY + size) ||
+                pointOnScreen(originX + size, originY + size)
+    }
+
+    fun chunkInView(chunk: Chunk): Boolean {
+        val chunkCoords = toRenderSpace(chunk.tankCoords)
+        val chunkSize = toRenderSpace(simulation.tank!!.chunkManager.chunkSize)
+        return squareInView(chunkCoords, chunkSize)
+    }
+
+    fun renderChunk(g: Graphics2D, chunk: Chunk) {
+        if (chunkInView(chunk)) {
+            if (simulation.inDebugMode()) stats["Chunks Rendered"] = stats["Chunks Rendered"]!! + 1
+            for (e in chunk.cells) renderEntity(g, e)
+        }
+    }
+
+    fun renderEntityAttachments(g: Graphics2D, e: Cell) {
+        val r1: Float = toRenderSpace(e.radius).toFloat()
+        val ePos = toRenderSpace(e.pos)
+        if (circleNotVisible(ePos, r1) || e.cellBindings.isEmpty()) return
+        val eColor = e.color
+        val red = eColor.red
+        val green = eColor.green
+        val blue = eColor.blue
+        for (binding in e.cellBindings) {
+            val attached = binding.destinationEntity
+            val r2: Float = toRenderSpace(attached.radius).toFloat()
+            val r = Math.min(r1, r2)
+            val s = g.stroke
+            g.stroke = BasicStroke(1.5f * r)
+            val attachedPos = toRenderSpace(attached.pos)
+            val attachedColor = attached.color
+            g.color = Color(
+                (red + attachedColor.red) / 2,
+                (green + attachedColor.green) / 2,
+                (blue + attachedColor.blue) / 2
+            ).brighter()
+            g.drawLine(ePos.x.toInt(), ePos.y.toInt(), attachedPos.x.toInt(), attachedPos.y.toInt())
+            g.stroke = s
+        }
+    }
+
+    fun entities(g: Graphics2D, tank: Tank?) {
+        for (chunk in tank!!.chunkManager.chunks) for (e in chunk.cells) renderEntityAttachments(g, e)
+        for (chunk in tank.chunkManager.chunks) renderChunk(g, chunk)
+        if (simulation.inDebugMode() && tracked != null) {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            val chunkManager = tank.chunkManager
+            val collisionEntities = chunkManager.broadCollisionDetection(
+                tracked!!.pos, tracked!!.radius
+            )
+            collisionEntities.forEachRemaining { o: Collidable? ->
+                stats["Broad Collision"] = 1 + stats.getOrDefault("Broad Collision", 0)
+                drawCollisionBounds(g, o, Color.RED.darker())
+            }
+            if (tracked is Protozoan) {
+                val p = tracked as Protozoan
+                drawCollisionBounds(g, tracked as Protozoan, p.interactRange, Color.WHITE.darker())
+                val interactCells = chunkManager.broadEntityDetection(
+                    (tracked as Protozoan).pos, p.interactRange
+                )
+                while (interactCells.hasNext()) {
+                    val cell = interactCells.next()
+                    if (p.cullFromRayCasting(cell)) continue
+                    stats["Broad Interact"] = 1 + stats.getOrDefault("Broad Interact", 0)
+                    drawCollisionBounds(g, cell, 1.1f * cell.radius, Color.WHITE.darker())
+                }
+                for (sensor in p.contactSensors) {
+                    val sensorPos = p.getSensorPosition(sensor)
+                    fillCircle(g, toRenderSpace(sensorPos), 2f, Color.WHITE.darker())
+                }
+            }
+            if (antiAliasing) g.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+            ) else g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        }
+    }
+
+    fun rocks(g: Graphics2D, tank: Tank?) {
+        val screenPoints = arrayOfNulls<Vector2>(3)
+        val xPoints = IntArray(screenPoints.size)
+        val yPoints = IntArray(screenPoints.size)
+        for (rock in tank!!.rocks) {
+            screenPoints[0] = toRenderSpace(rock.points[0])
+            screenPoints[1] = toRenderSpace(rock.points[1])
+            screenPoints[2] = toRenderSpace(rock.points[2])
+            for (i in screenPoints.indices) xPoints[i] = screenPoints[i]!!.x.toInt()
+            for (i in screenPoints.indices) yPoints[i] = screenPoints[i]!!.y.toInt()
+            val color = Color(
+                rock.color.red,
+                rock.color.green,
+                rock.color.blue,
+                if (simulation.inDebugMode()) 100 else 255
+            )
+            g.color = color
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            g.fillPolygon(xPoints, yPoints, screenPoints.size)
+            if (antiAliasing) g.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+            ) else g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            g.color = color.darker()
+            val s = g.stroke
+            g.stroke = BasicStroke(toRenderSpace(0.02f * Settings.maxRockSize).toFloat())
+            //			g.drawPolygon(xPoints, yPoints, screenPoints.length);
+            for (i in rock.edges.indices) {
+                if (rock.isEdgeAttached(i)) continue
+                val edge = rock.getEdge(i)
+                val start = toRenderSpace(edge[0])
+                val end = toRenderSpace(edge[1])
+                g.drawLine(start.x.toInt(), start.y.toInt(), end.x.toInt(), end.y.toInt())
+            }
+            g.stroke = s
+            if (simulation.inDebugMode()) {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+                g.color = Color.YELLOW.darker()
+                for (i in 0..2) {
+                    val edge = rock.getEdge(i)
+                    val edgeCentre = edge[0].add(edge[1]).scale(0.5f)
+                    val normalEnd = edgeCentre.add(rock.normals[i].mul(0.005f))
+                    val a = toRenderSpace(edgeCentre)
+                    val b = toRenderSpace(normalEnd)
+                    g.drawLine(a.x.toInt(), a.y.toInt(), b.x.toInt(), b.y.toInt())
+                }
+                if (antiAliasing) g.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+                ) else g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            }
+        }
+    }
+
+    fun drawCollisionBounds(g: Graphics2D, collidable: Collidable?, color: Color?) {
+        if (collidable is Cell) {
+            val e = collidable
+            drawCollisionBounds(g, e, e.radius, color)
+        } else if (collidable is Rock) {
+            drawCollisionBounds(g, collidable, color)
+        }
+    }
+
+    fun drawCollisionBounds(g: Graphics2D, rock: Rock, color: Color?) {
+        val screenPoints = arrayOf(
+            toRenderSpace(rock.points[0]),
+            toRenderSpace(rock.points[1]),
+            toRenderSpace(rock.points[2])
+        )
+        val xPoints = IntArray(screenPoints.size)
+        for (i in screenPoints.indices) xPoints[i] = screenPoints[i].x.toInt()
+        val yPoints = IntArray(screenPoints.size)
+        for (i in screenPoints.indices) yPoints[i] = screenPoints[i].y.toInt()
+        val strokeSize = 5
+        val s = g.stroke
+        g.stroke = BasicStroke(strokeSize.toFloat())
+        g.color = color
+        for (i in rock.edges.indices) {
+            if (rock.isEdgeAttached(i)) continue
+            val edge = rock.getEdge(i)
+            val start = toRenderSpace(edge[0])
+            val end = toRenderSpace(edge[1])
+            g.drawLine(start.x.toInt(), start.y.toInt(), end.x.toInt(), end.y.toInt())
+        }
+        g.stroke = s
+    }
+
+    fun drawCollisionBounds(g: Graphics2D, e: Cell, r: Float, color: Color?) {
+        var r = r
+        val pos = toRenderSpace(e.pos)
+        r = toRenderSpace(r).toFloat()
+        if (!circleNotVisible(pos, r)) drawCircle(g, pos, r, color, window.height / 500)
+    }
+
+    fun maskTank(g: Graphics, coords: Vector2, r: Float, alpha: Int) {
+        val n = microscopePolygonNPoints - 7
+        for (i in 0 until n) {
+            val t = (2 * Math.PI * i / n.toFloat()).toFloat()
+            microscopePolygonXPoints[i] = (coords.x + r * Math.cos(t.toDouble())).toInt()
+            microscopePolygonYPoints[i] = (coords.y + r * Math.sin(t.toDouble())).toInt()
+        }
+        microscopePolygonXPoints[n] = coords.x.toInt() + r.toInt()
+        microscopePolygonYPoints[n] = coords.y.toInt()
+        microscopePolygonXPoints[n + 1] = window.width
+        microscopePolygonYPoints[n + 1] = coords.y.toInt()
+        microscopePolygonXPoints[n + 2] = window.width
+        microscopePolygonYPoints[n + 2] = 0
+        microscopePolygonXPoints[n + 3] = 0
+        microscopePolygonYPoints[n + 3] = 0
+        microscopePolygonXPoints[n + 4] = 0
+        microscopePolygonYPoints[n + 4] = window.height
+        microscopePolygonXPoints[n + 5] = window.width
+        microscopePolygonYPoints[n + 5] = window.height
+        microscopePolygonXPoints[n + 6] = window.width
+        microscopePolygonYPoints[n + 6] = coords.y.toInt()
+        g.color = Color(0, 0, 0, alpha)
+        g.fillPolygon(microscopePolygonXPoints, microscopePolygonYPoints, microscopePolygonNPoints)
+    }
+
+    fun background(graphics: Graphics2D) {
+        time += 0.1.toFloat()
+        val backgroundR = 25 + (5 * Math.cos(time / 100.0)).toInt()
+        val backgroundG = 40 + (30 * Math.sin(time / 100.0)).toInt()
+        val backgroundB = 35 + (15 * Math.cos(time / 100.0 + 1)).toInt()
+        val backgroundColour = Color(backgroundR, backgroundG, backgroundB)
+        graphics.color = backgroundColour
+        graphics.fillRect(0, 0, window.width, window.height)
+        if (Settings.enableChemicalField && renderChemicals) {
+            if (antiAliasing) graphics.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_OFF
+            ) else graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val chemicalSolution = simulation.tank!!.chemicalSolution
+            val chemicalCellSize = toRenderSpace(chemicalSolution.gridSize)
+            for (i in 0 until chemicalSolution.nxChunks) {
+                for (j in 0 until chemicalSolution.nyChunks) {
+                    val chemicalCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i, j))
+                    val x = chemicalCellCoords.x.toInt()
+                    val y = chemicalCellCoords.y.toInt()
+                    val density = chemicalSolution.getPlantPheromoneDensity(i, j)
+                    if (density < 0.05f || !squareInView(chemicalCellCoords, chemicalCellSize)) continue
+                    val alpha = density / 2f
+                    val r = (alpha * 80 + (1 - alpha) * backgroundR).toInt()
+                    val g = (alpha * 200 + (1 - alpha) * backgroundG).toInt()
+                    val b = (alpha * 60 + (1 - alpha) * backgroundB).toInt()
+                    graphics.color = Color(r, g, b)
+                    val nextCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i + 1, j + 1))
+                    val nextX = nextCellCoords.x.toInt()
+                    val nextY = nextCellCoords.y.toInt()
+                    graphics.fillRect(x, y, nextX - x, nextY - y)
+                    if (simulation.inDebugMode() && isAdvancedDebugInfo) {
+                        graphics.color = Color.ORANGE.darker()
+                        graphics.drawRect(x, y, chemicalCellSize, chemicalCellSize)
+                    }
+                }
+            }
+            if (antiAliasing) graphics.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+            ) else graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        }
+        if (simulation.inDebugMode() && isAdvancedDebugInfo) {
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+            graphics.color = Color.YELLOW.darker()
+            val chunkManager = simulation.tank!!.chunkManager
+            val w = toRenderSpace(chunkManager.chunkSize)
+            for (chunk in chunkManager.chunks) {
+                val chunkCoords = toRenderSpace(chunk.tankCoords)
+                graphics.drawRect(chunkCoords.x.toInt(), chunkCoords.y.toInt(), w, w)
+            }
+            if (antiAliasing) graphics.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+            ) else graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        }
+    }
+
+    fun render() {
+        val fps = stats["FPS"]!!
+        stats.replaceAll { s: String?, v: Int? -> 0 }
+        stats["FPS"] = fps
+        val fpsDT = timeSeconds - lastFPSTime
+        if (fpsDT >= 1) {
+            stats["FPS"] = (framesRendered / fpsDT).toInt()
+            framesRendered = 0
+            lastFPSTime = timeSeconds
+        }
+        superSimpleRender = stats["FPS"]!! <= 10
+        val bs = bufferStrategy
+        if (bs == null) {
+            this.createBufferStrategy(3)
+            return
+        }
+        val graphics = bs.drawGraphics as Graphics2D
+        if (antiAliasing) graphics.setRenderingHint(
+            RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON
+        ) else graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+        graphics.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED)
+        graphics.setRenderingHint(
+            RenderingHints.KEY_ALPHA_INTERPOLATION,
+            RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED
+        )
+        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED)
+        zoom = targetZoom
+        stats["Zoom"] = (100 * zoom).toInt()
+        synchronized(simulation.tank!!) {
+            try {
+                background(graphics)
+                entities(graphics, simulation.tank)
+                rocks(graphics, simulation.tank)
+                maskTank(
+                    graphics,
+                    tankViewCentre,
+                    if (tracked != null) trackingScopeRadius else tankRenderRadius,
+                    if (simulation.inDebugMode()) 150 else 200
+                )
+                maskTank(
+                    graphics,
+                    toRenderSpace(Vector2(0f, 0f)),
+                    tankRenderRadius * zoom,
+                    if (simulation.inDebugMode()) 100 else 255
+                )
+                if (showUI) uI.render(graphics)
+                graphics.dispose()
+                bs.show()
+                framesRendered++
+            } catch (ignored: ConcurrentModificationException) {
+            }
+        }
+    }
+
+    val tankViewRadius: Float
+        get() = if (tracked != null) trackingScopeRadius else tankRenderRadius
+    val trackingScopeRadius: Float
+        get() = 3 * tankRenderRadius / 4
+
+    fun toRenderSpace(v: Vector2?): Vector2 {
+        return if (tracked == null) v!!.copy()
+            .scale(1 / simulation.tank!!.radius)
+            .translate(pan.mul(1 / tankRenderRadius))
+            .scale(tankRenderRadius * zoom)
+            .translate(tankViewCentre) else {
+            v!!.copy()
+                .take(tracked!!.pos!!) //					.rotate(rotate)
+                .scale(tankRenderRadius * zoom / simulation.tank!!.radius)
+                .translate(tankViewCentre)
+        }
+    }
+
+    fun toRenderSpace(s: Float): Int {
+        return (zoom * tankRenderRadius * s / simulation.tank!!.radius).toInt()
+    }
+
+    fun setZoom(d: Float) {
+        targetZoom = (initialZoom + zoomRange * (d - 1f) / zoomSlowness).toFloat()
+        if (targetZoom < 0) {
+            pan = Vector2(0f, 0f)
+            targetZoom = 0.01f
+        }
+        //		if (targetZoom > 20)
 //			targetZoom = 20;
-	}
+    }
 
-	public void setPan(Vector2 delta) {
-		pan = panPosTemp.add(delta);
-	}
+    fun setPan(delta: Vector2?) {
+        pan = panPosTemp.add(delta!!)
+    }
 
-	public void updatePanTemp() {
-		panPosTemp = pan;
-	}
-	
-	public void track(Cell e) {
-		if (e != null)
-			pan = new Vector2(0, 0);
-		else if (track != null)
-			pan = track.pos.mul(tankRenderRadius);
-		track = e;
-	}
+    fun updatePanTemp() {
+        panPosTemp = pan
+    }
 
-	public HashMap<String, Integer> getStats() {
-		return stats;
-	}
+    fun track(e: Cell?) {
+        if (e != null) pan = Vector2(0f, 0f) else if (tracked != null) pan = tracked!!.pos!!.mul(tankRenderRadius)
+        tracked = e
+    }
 
-	public float getZoom() {
-		return zoom;
-	}
-	
-	public Cell getTracked() {
-		return track;
-	}
+    fun getZoom(): Float {
+        return zoom
+    }
 
-	public void resetCamera() {
-		track = null;
-		pan = new Vector2(0, 0);
-		panPosTemp = new Vector2(0, 0);
-		targetZoom = 1;
-		zoom = 1;
-	}
+    fun resetCamera() {
+        tracked = null
+        pan = Vector2(0f, 0f)
+        panPosTemp = Vector2(0f, 0f)
+        targetZoom = 1f
+        zoom = 1f
+    }
 
-	public void toggleChemicalGrid() {
-		renderChemicals = !renderChemicals;
-	}
+    fun toggleChemicalGrid() {
+        renderChemicals = !renderChemicals
+    }
 
-	public void toggleAA() {
-		antiAliasing = !antiAliasing;
-	}
+    fun toggleAA() {
+        antiAliasing = !antiAliasing
+    }
 
-	public void toggleUI() {
-		showUI = !showUI;
-	}
+    fun toggleUI() {
+        showUI = !showUI
+    }
 
-	public void toggleAdvancedDebugInfo() {
-		advancedDebugInfo = !advancedDebugInfo;
-	}
+    fun toggleAdvancedDebugInfo() {
+        isAdvancedDebugInfo = !isAdvancedDebugInfo
+    }
 
-	public boolean isAdvancedDebugInfo() {
-		return advancedDebugInfo;
-	}
-
-	public UI getUI() {
-		return ui;
-	}
+    companion object {
+        private const val serialVersionUID = 1L
+    }
 }
