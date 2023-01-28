@@ -39,16 +39,16 @@ public class NNBrain implements Brain {
 
         if (Settings.enableChemicalField) {
             ChemicalSolution chemicalSolution = p.getTank().getChemicalSolution();
-            int chemicalX1 = chemicalSolution.toChemicalGridX(p.getPos().getX() - p.getRadius());
-            int chemicalX2 = chemicalSolution.toChemicalGridX(p.getPos().getX() + p.getRadius());
-            int chemicalY1 = chemicalSolution.toChemicalGridY(p.getPos().getX() - p.getRadius());
-            int chemicalY2 = chemicalSolution.toChemicalGridY(p.getPos().getX() + p.getRadius());
+            int chemicalX1 = chemicalSolution.toChemicalGridX(p.getPos().x - p.getRadius());
+            int chemicalX2 = chemicalSolution.toChemicalGridX(p.getPos().x + p.getRadius());
+            int chemicalY1 = chemicalSolution.toChemicalGridY(p.getPos().x - p.getRadius());
+            int chemicalY2 = chemicalSolution.toChemicalGridY(p.getPos().x + p.getRadius());
             inputs[i++] = chemicalSolution.getPlantPheromoneDensity(chemicalX1, chemicalY1) -
                     chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY2);
             inputs[i++] = chemicalSolution.getPlantPheromoneDensity(chemicalX1, chemicalY2) -
                     chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY1);
-            int chemicalX = chemicalSolution.toChemicalGridX(p.getPos().getX());
-            int chemicalY = chemicalSolution.toChemicalGridX(p.getPos().getY());
+            int chemicalX = chemicalSolution.toChemicalGridX(p.getPos().x);
+            int chemicalY = chemicalSolution.toChemicalGridX(p.getPos().y);
             inputs[i++] = 2 * chemicalSolution.getPlantPheromoneDensity(chemicalX, chemicalY) - 1;
         }
 

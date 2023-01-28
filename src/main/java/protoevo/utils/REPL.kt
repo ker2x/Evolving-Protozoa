@@ -1,83 +1,58 @@
-package protoevo.utils;
+package protoevo.utils
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import protoevo.core.Application.exit
+import protoevo.core.Simulation
+import java.io.*
 
-import protoevo.core.Application;
-import protoevo.core.Simulation;
-
-public class REPL implements Runnable
-{
-    private final Simulation simulation;
-    private final Window window;
-    private boolean running = true;
-
-    public REPL(Simulation simulation, Window window)
-    {
-        this.simulation = simulation;
-        this.window = window;
+class REPL(private val simulation: Simulation, private val window: Window) : Runnable {
+    private val running = true
+    @Throws(Exception::class)
+    fun setTimeDilation(args: Array<String>) {
+        if (args.size != 2) throw Exception("This command takes 2 arguments.")
+        val d = args[1].toFloat()
+        simulation.timeDilation = d
     }
 
-    public void setTimeDilation(String[] args) throws Exception
-    {
-        if (args.length != 2)
-            throw new Exception("This command takes 2 arguments.");
+    override fun run() {
+        println("Starting REPL...")
+        val bufferRead = BufferedReader(InputStreamReader(System.`in`))
+        while (running) {
+            var line: String
+            try {
+                print("> ")
+                line = bufferRead.readLine()
+                val args = line.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                val cmd = args[0]
+                when (cmd) {
+                    "help" -> println("commands - help, quit, stats, settime, gettime")
+                    "quit" -> {
+                        simulation.close()
+                        exit()
+                    }
 
-        float d = Float.parseFloat(args[1]);
-        simulation.setTimeDilation(d);
-    }
+                    "stats" -> simulation.printStats()
+                    "settime" -> setTimeDilation(args)
+                    "gettime" -> println(simulation.timeDilation)
+                    "toggledebug" -> {
+                        println("Toggling debug mode.")
+                        simulation.toggleDebug()
+                    }
 
-    @Override
-    public void run() {
-        System.out.println("Starting REPL...");
-        BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
-        while (running)
-        {
-            String line;
-            try
-            {
-                System.out.print("> ");
-                line = bufferRead.readLine();
-                String[] args = line.split(" ");
-                String cmd = args[0];
-                switch (cmd)
-                {
-                    case "help":
-                        System.out.println("commands - help, quit, stats, settime, gettime");
-                        break;
-                    case "quit":
-                        simulation.close();
-                        Application.exit();
-                        break;
-                    case "stats":
-                        simulation.printStats();
-                        break;
-                    case "settime":
-                        setTimeDilation(args);
-                        break;
-                    case "gettime":
-                        System.out.println(simulation.getTimeDilation());
-                        break;
-                    case "toggledebug":
-                        System.out.println("Toggling debug mode.");
-                        simulation.toggleDebug();
-                        break;
-                    case "toggleui":
-                        System.out.println("Toggling UI.");
-                        window.getFrame().setVisible(!window.getFrame().isVisible());
-                        simulation.toggleUpdateDelay();
-                        break;
-                    case "pause":
-                        simulation.togglePause();
-                        System.out.println("Toggling pause.");
-                        break;
-                    default:
-                        System.out.println("Command not recognised.");
-                        break;
+                    "toggleui" -> {
+                        println("Toggling UI.")
+                        window.frame.isVisible = !window.frame.isVisible
+                        simulation.toggleUpdateDelay()
+                    }
+
+                    "pause" -> {
+                        simulation.togglePause()
+                        println("Toggling pause.")
+                    }
+
+                    else -> println("Command not recognised.")
                 }
-            }
-            catch (Exception e) {
-                System.out.println(e.getMessage());
+            } catch (e: Exception) {
+                println(e.message)
             }
         }
     }

@@ -1,28 +1,28 @@
-package protoevo.utils;
+package protoevo.utils
 
-public class CachedMath {
+object CachedMath {
+    const val precision = 1000
+    val sin = FloatArray(precision) // lookup table
 
-    static final int precision = 1000;
-
-    static final float[] sin = new float[precision]; // lookup table
-    static {
+    init {
         // a static initializer fills the table
         // in this implementation, units are in degrees
-        for (int i = 0; i < sin.length; i++) {
-            sin[i] = (float) Math.sin(2 * Math.PI * i / (float) precision);
+        for (i in sin.indices) {
+            sin[i] = Math.sin(2 * Math.PI * i / precision.toFloat()).toFloat()
         }
     }
+
     // Private function for table lookup
-    private static float sinLookup(int a) {
-        return a >= 0 ? sin[a % precision] : -sin[-a % precision];
+    private fun sinLookup(a: Int): Float {
+        return if (a >= 0) sin[a % precision] else -sin[-a % precision]
     }
 
     // These are your working functions:
-    public static float sin(float a) {
-        return sinLookup((int)(a * precision / (2 * Math.PI)));
+    fun sin(a: Float): Float {
+        return sinLookup((a * precision / (2 * Math.PI)).toInt())
     }
 
-    public static float cos(float a) {
-        return sinLookup((int)(((a + Math.PI / 2) * precision) / (2 * Math.PI)));
+    fun cos(a: Float): Float {
+        return sinLookup(((a + Math.PI / 2) * precision / (2 * Math.PI)).toInt())
     }
 }

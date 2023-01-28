@@ -410,8 +410,8 @@ public abstract class Cell extends Particle implements Serializable
 
 	public Map<String, Float> getDebugStats() {
 		TreeMap<String, Float> stats = new TreeMap<>();
-		stats.put("Position X", Settings.statsDistanceScalar * getPos().getX());
-		stats.put("Position Y", Settings.statsDistanceScalar * getPos().getY());
+		stats.put("Position X", Settings.statsDistanceScalar * getPos().x);
+		stats.put("Position Y", Settings.statsDistanceScalar * getPos().y);
 		return stats;
 	}
 	

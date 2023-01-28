@@ -136,11 +136,11 @@ public class Protozoan extends Cell
 	public boolean cullFromRayCasting(Collidable o) {
 		if (o instanceof Particle) {
 			Particle p = (Particle) o;
-			float dx = p.getPos().getX() - getPos().getX();
-			float dy = p.getPos().getY() - getPos().getY();
+			float dx = p.getPos().x - getPos().x;
+			float dy = p.getPos().y - getPos().y;
 			float d2 = dx * dx + dy * dy;
-			float dirX = getDir().getX();
-			float dirY = getDir().getY();
+			float dirX = getDir().x;
+			float dirY = getDir().y;
 			float dirLength2 = getDir().len2();
 			return (dx * dirX + dy * dirY) / Math.sqrt(d2 * dirLength2) < cosHalfFov;
 		}

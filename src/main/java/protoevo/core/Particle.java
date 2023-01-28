@@ -111,10 +111,10 @@ public class Particle extends Collidable implements Serializable {
 
         if (l1 > 0) {
             collisions[0].collided = true;
-            collisions[0].point.set(start).translate(ray.getX() * l1, ray.getY() * l1);
+            collisions[0].point.set(start).translate(ray.x * l1, ray.y * l1);
         } else if (l2 > 0) {
             collisions[1].collided = true;
-            collisions[1].point.set(start).translate(ray.getX() * l2, ray.getY() * l2);
+            collisions[1].point.set(start).translate(ray.x * l2, ray.y * l2);
         }
     }
 
@@ -253,8 +253,8 @@ public class Particle extends Collidable implements Serializable {
     }
 
     public Vector2[] getBoundingBox() {
-        float x = pos.getX();
-        float y = pos.getY();
+        float x = pos.x;
+        float y = pos.y;
         float r = getRadius();
         return new Vector2[]{new Vector2(x - r, y - r), new Vector2(x + r, y + r)};
     }

@@ -1,119 +1,50 @@
-package protoevo.utils;
+package protoevo.utils
 
-import java.awt.*;
-import java.awt.font.FontRenderContext;
+import java.awt.*
+import java.awt.font.FontRenderContext
 
+class TextObject(var text: String?, private var m_font: String?, var size: Int, var position: Vector2) {
+    var style: Int
+    var color: Color?
 
-public class TextObject {
-	
-	private String m_font;
-	private String m_text;
-	private Vector2 m_position;
-	
-	private int m_size, m_style;
-	private Color m_colour;
+    constructor(text: String?, size: Int) : this(text, TextStyle.Companion.fontName, size, Vector2(0f, 0f))
+    constructor(text: String?, size: Int, position: Vector2) : this(text, TextStyle.Companion.fontName, size, position)
 
-	public TextObject(String text, int size)
-	{
-		this(text, TextStyle.fontName, size, new Vector2(0f, 0f));
-	}
+    init {
+        style = Font.PLAIN
+        color = Color.BLACK
+    }
 
-	public TextObject(String text, int size, Vector2 position)
-	{
-		this(text, TextStyle.fontName, size, position);
-	}
+    fun render(g: Graphics2D) {
+        g.font = Font(m_font, style, size)
+        g.color = color
+        g.drawString(text, position.x.toInt(), position.y.toInt())
+    }
 
-	public TextObject(String text, String font, int size, Vector2 position)
-	{
-		m_position = position;
-		m_size = size;
-		m_text = text;
-		m_font = font;
-		
-		m_style = Font.PLAIN;
-		m_colour = Color.BLACK;
+    fun setTextStyle(textStyle: TextStyle) {
+        size = textStyle.size
+        m_font = textStyle.font
+        color = textStyle.color
+        style = textStyle.style
+    }
 
-	}
-	
-	public void render(Graphics2D g)
-	{
-		g.setFont(new Font(m_font, m_style, m_size));
-		g.setColor(m_colour);
-		g.drawString(m_text, (int) m_position.getX(), (int) m_position.getY());
-	}
-	
-	public void setTextStyle(TextStyle textStyle)
-	{
-		m_size = textStyle.getSize();
-		m_font = textStyle.getFont();
-		m_colour = textStyle.getColor();
-		m_style = textStyle.getStyle();
-	}
-	
-	public int getWidth() 
-	{
-		return (int) 
-				new Font(m_font, m_style, m_size)
-					.getStringBounds(
-						m_text, 
-						new FontRenderContext(null, true, false)
-					).getWidth();
-	}
-	
-	public int getHeight() {
-		return (int) 
-				new Font(m_font, m_style, m_size)
-					.getStringBounds(
-						m_text, 
-						new FontRenderContext(null, true, false)
-					).getHeight();
-	}
-	
-	public void setText(String text) {
-		m_text = text;
-	}
-	
-	public void setFont(String font) {
-		m_font = font;
-	}
-	
-	public void setStyle(int style) {
-		m_style = style;
-	}
-	
-	public void setSize(int size) {
-		m_size = size;
-	}
-	
-	public void setColor(Color colour) {
-		m_colour = colour;
-	}
-	
-	public void setPosition(Vector2 position) {
-		m_position = position;
-	}
-	
-	public String getText()	{
-		return m_text;
-	}
-	
-	public Font getFont() {
-		return new Font(m_font, m_style, m_size);
-	}
-	
-	public int getStyle() {
-		return m_style;
-	}
-	
-	public int getSize() {
-		return m_size;
-	}
-	public Color getColor() {
-		return m_colour;
-	}
-	
-	public Vector2 getPosition() {
-		return m_position;
-	}
-	
+    val width: Int
+        get() = Font(m_font, style, size)
+            .getStringBounds(
+                text,
+                FontRenderContext(null, true, false)
+            ).width.toInt()
+    val height: Int
+        get() = Font(m_font, style, size)
+            .getStringBounds(
+                text,
+                FontRenderContext(null, true, false)
+            ).height.toInt()
+
+    fun setFont(font: String?) {
+        m_font = font
+    }
+
+    val font: Font
+        get() = Font(m_font, style, size)
 }

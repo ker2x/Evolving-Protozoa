@@ -50,8 +50,8 @@ public class ChunkManager implements Serializable {
             float range,
             Function<Chunk, Iterator<T>> scanner
     ) {
-        float x = pos.getX();
-        float y = pos.getY();
+        float x = pos.x;
+        float y = pos.y;
 
         int iMin = this.toChunkX(x - range);
         int iMax = this.toChunkX(x + range);
@@ -112,8 +112,8 @@ public class ChunkManager implements Serializable {
     }
 
     public Vector2 toTankCoords(Vector2 chunkCoords) {
-        float x = (chunkCoords.getX() - 1) * chunkSize + xMin;
-        float y = (chunkCoords.getY() - 1) * chunkSize + yMin;
+        float x = (chunkCoords.x - 1) * chunkSize + xMin;
+        float y = (chunkCoords.y - 1) * chunkSize + yMin;
         return new Vector2(x, y);
     }
 
@@ -122,7 +122,7 @@ public class ChunkManager implements Serializable {
     }
 
     public Chunk getChunk(Vector2 pos) {
-        int chunkID = this.toChunkID(pos.getX(), pos.getY());
+        int chunkID = this.toChunkID(pos.x, pos.y);
         return getChunk(chunkID);
     }
 
@@ -191,8 +191,8 @@ public class ChunkManager implements Serializable {
         int jMin = Integer.MAX_VALUE;
         for (Vector2 p : rock.getPoints()) {
             Chunk chunk = getChunk(p);
-            int i = (int) chunk.getChunkCoords().getX();
-            int j = (int) chunk.getChunkCoords().getY();
+            int i = (int) chunk.getChunkCoords().x;
+            int j = (int) chunk.getChunkCoords().y;
             iMax = Math.max(i, iMax);
             iMin = Math.min(i, iMin);
             jMax = Math.max(j, jMax);

@@ -45,7 +45,7 @@ public class Renderer extends Canvas
 	{
 		this.simulation = simulation;
 		this.window = window;
-		window.getInput().onLeftMouseRelease = this::updatePanTemp;
+		window.input.onLeftMouseRelease = this::updatePanTemp;
 
 		stats.put("FPS", 0);
 		stats.put("Chunks Rendered", 0);
@@ -86,8 +86,8 @@ public class Renderer extends Canvas
 		
 		g.setColor(c.darker());
 		g.fillArc(
-				(int)(pos.getX() - r), 
-				(int)(pos.getY() - r), 
+				(int)(pos.x - r),
+				(int)(pos.y - r),
 				(int)(2*r), 
 				(int)(2*r),
 				(int) Math.toDegrees(t0  - 2.8*dt), 
@@ -106,8 +106,8 @@ public class Renderer extends Canvas
 						g.setColor(Color.WHITE);
 				}
 				g.fillArc(
-						(int) (pos.getX() - r),
-						(int) (pos.getY() - r),
+						(int) (pos.x - r),
+						(int) (pos.y - r),
 						(int) (2 * r),
 						(int) (2 * r),
 						(int) Math.toDegrees(t - 0.01),
@@ -118,8 +118,8 @@ public class Renderer extends Canvas
 		
 		g.setColor(c.darker());
 		g.fillArc(
-				(int)(pos.getX() - 0.8*r), 
-				(int)(pos.getY() - 0.8*r), 
+				(int)(pos.x - 0.8*r),
+				(int)(pos.y - 0.8*r),
 				(int)(2*0.8*r), 
 				(int)(2*0.8*r),
 				(int) Math.toDegrees(t0  - 3*dt), 
@@ -127,8 +127,8 @@ public class Renderer extends Canvas
 		
 		g.setColor(c);
 		g.fillOval(
-				(int)(pos.getX() - 0.75*r), 
-				(int)(pos.getY() - 0.75*r), 
+				(int)(pos.x - 0.75*r),
+				(int)(pos.y - 0.75*r),
 				(int)(2*0.75*r), 
 				(int)(2*0.75*r));
 
@@ -142,8 +142,8 @@ public class Renderer extends Canvas
 					Vector2 rayStart = pos.add(rayRotated.unit().scale(r));
 					Vector2 rayEnd = pos.add(rayDir);
 					g.drawLine(
-							(int) rayStart.getX(), (int) rayStart.getY(),
-							(int) rayEnd.getX(), (int) rayEnd.getY());
+							(int) rayStart.x, (int) rayStart.y,
+							(int) rayEnd.x, (int) rayEnd.y);
 				}
 			}
 		}
@@ -170,8 +170,8 @@ public class Renderer extends Canvas
 				Vector2 spikeStartPos = p.getDir().unit().rotate(spike.angle).setLength(r).translate(pos);
 				float spikeLen = toRenderSpace(p.getSpikeLength(spike));
 				Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen));
-				g.drawLine((int) (spikeStartPos.getX()), (int) (spikeStartPos.getY()),
-						(int) (spikeEndPos.getX()), (int) (spikeEndPos.getY()));
+				g.drawLine((int) (spikeStartPos.x), (int) (spikeStartPos.y),
+						(int) (spikeEndPos.x), (int) (spikeEndPos.y));
 				g.setStroke(s);
 			}
 		}
@@ -190,8 +190,8 @@ public class Renderer extends Canvas
 				for (float t = 0; t < 2 * Math.PI; t += dt) {
 					float percent = 0.1f + 0.2f * random.nextFloat();
 					float radius = toRenderSpace(percent * p.getRadius());
-					int x = (int) (radius * (0.1 + Math.cos(t + t0)) + pos.getX());
-					int y = (int) (radius * (-0.1 + Math.sin(t + t0)) + pos.getY());
+					int x = (int) (radius * (0.1 + Math.cos(t + t0)) + pos.x);
+					int y = (int) (radius * (-0.1 + Math.sin(t + t0)) + pos.y);
 					nucleus.addPoint(x, y);
 				}
 				Color b = p.getMate().getColor().brighter();
@@ -204,10 +204,10 @@ public class Renderer extends Canvas
 	}
 
 	public boolean circleNotVisible(Vector2 pos, float r) {
-		return (pos.getX() - r > window.getWidth())
-			 ||(pos.getX() + r < 0)
-			 ||(pos.getY() - r > window.getHeight())
-			 ||(pos.getY() + r < 0);
+		return (pos.x - r > window.getWidth())
+			 ||(pos.x + r < 0)
+			 ||(pos.y - r > window.getHeight())
+			 ||(pos.y + r < 0);
 	}
 
 	public boolean pointNotVisible(Vector2 pos) {
@@ -223,8 +223,8 @@ public class Renderer extends Canvas
 		Stroke s = g.getStroke();
 		g.setStroke(new BasicStroke(strokeSize));
 		g.drawOval(
-				(int)(pos.getX() - r),
-				(int)(pos.getY() - r),
+				(int)(pos.x - r),
+				(int)(pos.y - r),
 				(int)(2*r),
 				(int)(2*r));
 		g.setStroke(s);
@@ -233,8 +233,8 @@ public class Renderer extends Canvas
 	public void fillCircle(Graphics2D g, Vector2 pos, float r, Color c) {
 		g.setColor(c);
 		g.fillOval(
-				(int)(pos.getX() - r),
-				(int)(pos.getY() - r),
+				(int)(pos.x - r),
+				(int)(pos.y - r),
 				(int)(2*r),
 				(int)(2*r));
 	}
@@ -246,15 +246,15 @@ public class Renderer extends Canvas
 		if (r <= 3) {
 			int l = Math.max((int) r, 1);
 			g.fillRect(
-					(int)(pos.getX() - l),
-					(int)(pos.getY() - l),
+					(int)(pos.x - l),
+					(int)(pos.y - l),
 					(int)(2*l),
 					(int)(2*l));
 		}
 		else {
 			g.fillOval(
-					(int)(pos.getX() - r),
-					(int)(pos.getY() - r),
+					(int)(pos.x - r),
+					(int)(pos.y - r),
 					(int)(2*r),
 					(int)(2*r));
 		}
@@ -303,8 +303,8 @@ public class Renderer extends Canvas
 	}
 
 	public boolean squareInView(Vector2 origin, int size) {
-		int originX = (int) origin.getX();
-		int originY = (int) origin.getY();
+		int originX = (int) origin.x;
+		int originY = (int) origin.y;
 		return pointOnScreen(originX, originY) ||
 				pointOnScreen(originX + size, originY) ||
 				pointOnScreen(originX, originY + size) ||
@@ -350,8 +350,8 @@ public class Renderer extends Canvas
 					(green + attachedColor.getGreen()) / 2,
 					(blue + attachedColor.getBlue()) / 2
 			).brighter());
-			g.drawLine((int) ePos.getX(), (int) ePos.getY(),
-					(int) attachedPos.getX(), (int) attachedPos.getY());
+			g.drawLine((int) ePos.x, (int) ePos.y,
+					(int) attachedPos.x, (int) attachedPos.y);
 			g.setStroke(s);
 		}
 	}
@@ -417,10 +417,10 @@ public class Renderer extends Canvas
 			screenPoints[2] = toRenderSpace(rock.getPoints()[2]);
 
 			for (int i = 0; i < screenPoints.length; i++)
-				xPoints[i] = (int) screenPoints[i].getX();
+				xPoints[i] = (int) screenPoints[i].x;
 
 			for (int i = 0; i < screenPoints.length; i++)
-				yPoints[i] = (int) screenPoints[i].getY();
+				yPoints[i] = (int) screenPoints[i].y;
 
 			Color color = new Color(
 					rock.getColor().getRed(),
@@ -448,8 +448,8 @@ public class Renderer extends Canvas
 				Vector2[] edge = rock.getEdge(i);
 				Vector2 start = toRenderSpace(edge[0]);
 				Vector2 end = toRenderSpace(edge[1]);
-				g.drawLine((int) start.getX(), (int) start.getY(),
-						   (int) end.getX(), (int) end.getY());
+				g.drawLine((int) start.x, (int) start.y,
+						   (int) end.x, (int) end.y);
 			}
 			g.setStroke(s);
 
@@ -463,7 +463,7 @@ public class Renderer extends Canvas
 					Vector2 normalEnd = edgeCentre.add(rock.getNormals()[i].mul(0.005f));
 					Vector2 a = toRenderSpace(normalStart);
 					Vector2 b = toRenderSpace(normalEnd);
-					g.drawLine((int) a.getX(), (int) a.getY(), (int) b.getX(), (int) b.getY());
+					g.drawLine((int) a.x, (int) a.y, (int) b.x, (int) b.y);
 				}
 
 				if (antiAliasing)
@@ -493,11 +493,11 @@ public class Renderer extends Canvas
 
 		int[] xPoints = new int[screenPoints.length];
 		for (int i = 0; i < screenPoints.length; i++)
-			xPoints[i] = (int) screenPoints[i].getX();
+			xPoints[i] = (int) screenPoints[i].x;
 
 		int[] yPoints = new int[screenPoints.length];
 		for (int i = 0; i < screenPoints.length; i++)
-			yPoints[i] = (int) screenPoints[i].getY();
+			yPoints[i] = (int) screenPoints[i].y;
 
 		int strokeSize = 5;
 		Stroke s = g.getStroke();
@@ -509,8 +509,8 @@ public class Renderer extends Canvas
 			Vector2[] edge = rock.getEdge(i);
 			Vector2 start = toRenderSpace(edge[0]);
 			Vector2 end = toRenderSpace(edge[1]);
-			g.drawLine((int) start.getX(), (int) start.getY(),
-					   (int) end.getX(), (int) end.getY());
+			g.drawLine((int) start.x, (int) start.y,
+					   (int) end.x, (int) end.y);
 		}
 		g.setStroke(s);
 	}
@@ -529,15 +529,15 @@ public class Renderer extends Canvas
 		for (int i = 0; i < n; i++) 
 		{
 			float t = (float) (2*Math.PI * i / (float) n);
-			microscopePolygonXPoints[i] = (int) (coords.getX() + r * Math.cos(t));
-			microscopePolygonYPoints[i] = (int) (coords.getY() + r * Math.sin(t));
+			microscopePolygonXPoints[i] = (int) (coords.x + r * Math.cos(t));
+			microscopePolygonYPoints[i] = (int) (coords.y + r * Math.sin(t));
 		}
 		
-		microscopePolygonXPoints[n] 	 = (int) (coords.getX()) + (int) r;
-		microscopePolygonYPoints[n]	 = (int) (coords.getY());
+		microscopePolygonXPoints[n] 	 = (int) (coords.x) + (int) r;
+		microscopePolygonYPoints[n]	 = (int) (coords.y);
 		
 		microscopePolygonXPoints[n+1] = window.getWidth();
-		microscopePolygonYPoints[n+1] = (int) (coords.getY());
+		microscopePolygonYPoints[n+1] = (int) (coords.y);
 		
 		microscopePolygonXPoints[n+2] = window.getWidth();
 		microscopePolygonYPoints[n+2] = 0;
@@ -552,7 +552,7 @@ public class Renderer extends Canvas
 		microscopePolygonYPoints[n+5] = window.getHeight();
 		
 		microscopePolygonXPoints[n+6] = window.getWidth();
-		microscopePolygonYPoints[n+6] = (int) (coords.getY());
+		microscopePolygonYPoints[n+6] = (int) (coords.y);
 		
 		g.setColor(new Color(0, 0, 0, alpha));
 		g.fillPolygon(microscopePolygonXPoints, microscopePolygonYPoints, microscopePolygonNPoints);
@@ -583,8 +583,8 @@ public class Renderer extends Canvas
 				for (int j = 0; j < chemicalSolution.getNYChunks(); j++) {
 
 					Vector2 chemicalCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i, j));
-					int x = (int) chemicalCellCoords.getX();
-					int y = (int) chemicalCellCoords.getY();
+					int x = (int) chemicalCellCoords.x;
+					int y = (int) chemicalCellCoords.y;
 
 					float density = chemicalSolution.getPlantPheromoneDensity(i, j);
 					if (density < 0.05f || !squareInView(chemicalCellCoords, chemicalCellSize))
@@ -597,8 +597,8 @@ public class Renderer extends Canvas
 					graphics.setColor(new Color(r, g, b));
 
 					Vector2 nextCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i+1, j+1));
-					int nextX = (int) nextCellCoords.getX();
-					int nextY = (int) nextCellCoords.getY();
+					int nextX = (int) nextCellCoords.x;
+					int nextY = (int) nextCellCoords.y;
 
 					graphics.fillRect(x, y, nextX - x, nextY - y);
 					if (simulation.inDebugMode() && advancedDebugInfo) {
@@ -620,7 +620,7 @@ public class Renderer extends Canvas
 			int w = toRenderSpace(chunkManager.getChunkSize());
 			for (Chunk chunk : chunkManager.getChunks()) {
 				Vector2 chunkCoords = toRenderSpace(chunk.getTankCoords());
-				graphics.drawRect((int) chunkCoords.getX(), (int) chunkCoords.getY(), w, w);
+				graphics.drawRect((int) chunkCoords.x, (int) chunkCoords.y, w, w);
 			}
 
 			if (antiAliasing)

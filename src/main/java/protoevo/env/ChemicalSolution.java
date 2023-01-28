@@ -81,8 +81,8 @@ public class ChemicalSolution implements Serializable {
 
     public void depositChemicals(float delta, Cell e) {
         if (e instanceof PlantCell && !e.isDead()) {
-            int i = toChemicalGridX(e.getPos().getX());
-            int j = toChemicalGridY(e.getPos().getY());
+            int i = toChemicalGridX(e.getPos().x);
+            int j = toChemicalGridY(e.getPos().y);
             float k = Settings.plantPheromoneDeposit;
             chemicalGrid[i][j].currentPlantPheromoneDensity += delta * k * e.getRadius() * e.getHealth();
         }

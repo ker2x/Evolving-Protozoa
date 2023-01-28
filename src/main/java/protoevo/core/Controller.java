@@ -37,11 +37,11 @@ public class Controller
 	
 	private boolean isPosInChunk(Vector2 pos, Chunk chunk) {
 		Vector2 chunkCoords = renderer.toRenderSpace(chunk.getTankCoords());
-		int originX = (int) chunkCoords.getX();
-		int originY = (int) chunkCoords.getY();
+		int originX = (int) chunkCoords.x;
+		int originY = (int) chunkCoords.y;
 		int chunkSize = renderer.toRenderSpace(simulation.getTank().getChunkManager().getChunkSize());
-		return originX <= pos.getX() && pos.getX() < originX + chunkSize
-				&& originY <= pos.getY() && pos.getY() < originY + chunkSize;
+		return originX <= pos.x && pos.x < originX + chunkSize
+				&& originY <= pos.y && pos.y < originY + chunkSize;
 	}
 
 	public void update()
@@ -112,10 +112,10 @@ public class Controller
 	}
 
 	private boolean isCircleInChunk(Vector2 pos, int r, Chunk chunk) {
-		return isPosInChunk(new Vector2(pos.getX() - r, pos.getY() - r), chunk) ||
-				isPosInChunk(new Vector2(pos.getX() - r, pos.getY() + r), chunk) ||
-				isPosInChunk(new Vector2(pos.getX() + r, pos.getY() - r), chunk) ||
-				isPosInChunk(new Vector2(pos.getX() + r, pos.getY() + r), chunk);
+		return isPosInChunk(new Vector2(pos.x - r, pos.y - r), chunk) ||
+				isPosInChunk(new Vector2(pos.x - r, pos.y + r), chunk) ||
+				isPosInChunk(new Vector2(pos.x + r, pos.y - r), chunk) ||
+				isPosInChunk(new Vector2(pos.x + r, pos.y + r), chunk);
 	}
 
     public Vector2 getCurrentMousePosition() {

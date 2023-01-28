@@ -187,7 +187,7 @@ public class UI implements ChangeListener {
 
 		int x = (int) (0.98 * window.getWidth() - maxWidth);
 		for (TextObject statText : statTexts) {
-			int y = (int) statText.getPosition().getY();
+			int y = (int) statText.getPosition().y;
 			statText.setPosition(new Vector2(x, y));
 			if (simulation.inDebugMode() || (showFPS && statText.getText().contains("FPS")))
 				statText.render(g);
@@ -320,8 +320,8 @@ public class UI implements ChangeListener {
 
 
 		Vector2 mousePos = window.getCurrentMousePosition();
-		int mouseX = (int) mousePos.getX();
-		int mouseY = (int) mousePos.getY();
+		int mouseX = (int) mousePos.x;
+		int mouseY = (int) mousePos.y;
 		if (boxXStart - 2*r < mouseX && mouseX < boxXStart + boxWidth + 2*r &&
 				boxYStart - 2*r < mouseY && mouseY < boxYStart + boxHeight + 2*r) {
 			for (Neuron neuron : nn.getNeurons()) {

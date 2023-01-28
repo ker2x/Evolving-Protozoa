@@ -1,9 +1,7 @@
-package protoevo.utils;
+package protoevo.utils
 
-public class Utils {
-
-    public static double getTimeSeconds() {
-        return System.currentTimeMillis() / 1000.0;
-    }
-
+object Utils {
+    @JvmStatic
+    val timeSeconds: Double
+        get() = System.currentTimeMillis() / 1000.0
 }

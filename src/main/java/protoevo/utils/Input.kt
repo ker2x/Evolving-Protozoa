@@ -1,187 +1,135 @@
-package protoevo.utils;
+package protoevo.utils
 
-import javax.swing.*;
-import java.awt.event.*;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.awt.event.*
+import java.util.*
+import javax.swing.SwingUtilities
 
-public class Input implements KeyListener, FocusListener,
-				MouseListener, MouseMotionListener, MouseWheelListener 
-{
-	private Vector2 mousePosition = new Vector2(0, 0);
-	private Vector2 positionOnLeftClickDown = new Vector2(0, 0);
-	private Vector2 mouseLeftClickDelta = new Vector2(0, 0);
-	private boolean[] keys 			= new boolean[65536];
-	private boolean[] mouseButtons 	= new boolean[4];
-	private boolean[] mouseJustDown = new boolean[4];
+class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
+    var mousePosition = Vector2(0f, 0f)
+        private set
+    private var positionOnLeftClickDown = Vector2(0f, 0f)
+    var mouseLeftClickDelta: Vector2? = Vector2(0f, 0f)
+        private set
+    private val keys = BooleanArray(65536)
+    private val mouseButtons = BooleanArray(4)
+    private val mouseJustDown = BooleanArray(4)
+    private val onPressHandlers = HashMap<Int, Runnable>()
+    @JvmField
+    var onLeftMouseRelease: Runnable? = null
+    fun registerOnPressHandler(key: Int, handler: Runnable) {
+        onPressHandlers[key] = handler
+    }
 
-	private final HashMap<Integer, Runnable> onPressHandlers = new HashMap<>();
-	public Runnable onLeftMouseRelease;
+    fun unregisterOnPressHandler(key: Int) {
+        onPressHandlers.remove(key)
+    }
 
-	public void registerOnPressHandler(int key, Runnable handler) {
-		onPressHandlers.put(key, handler);
-	}
+    var mouseWheelRotation = 0
+        private set
 
-	public void unregisterOnPressHandler(int key) {
-		onPressHandlers.remove(key);
-	}
-	
-	private int mouseWheelRotation = 0;
+    fun reset() {
+        mouseWheelRotation = 0
+        mousePosition = Vector2(0f, 0f)
+        mouseLeftClickDelta = Vector2(0f, 0f)
+        positionOnLeftClickDown = Vector2(0f, 0f)
+    }
 
-	public void reset() {
-		mouseWheelRotation = 0;
-		mousePosition = new Vector2(0, 0);
-		mouseLeftClickDelta = new Vector2(0, 0);
-		positionOnLeftClickDown = new Vector2(0, 0);
-	}
-	
-	public boolean getKey(int key) {
-		return keys[key];
-	}
+    fun getKey(key: Int): Boolean {
+        return keys[key]
+    }
 
-	public boolean getMouse(int button) {
-		return mouseButtons[button];
-	}
-	
-	private boolean mouseButtonJustDown(int button)
-	{
-		if (getMouse(button) && !mouseJustDown[button])
-		{
-			mouseJustDown[button] = true;
-			return true;
-		}
-		else if (!getMouse(button))
-		{
-			mouseJustDown[button] = false;
-		}
-		return false;
-	}
-	
-	public boolean isLeftMouseJustPressed()  { return mouseButtonJustDown(1); }
-	public boolean isRightMouseJustPressed() { return mouseButtonJustDown(3); }
-	public boolean isLeftMousePressed()  	 { return getMouse(1); 			  }
-	public boolean isRightMousePressed() 	 { return getMouse(3); 			  }
-	
-	public Vector2 getMousePosition() {
-		return mousePosition;
-	}
-	
-	public Vector2 getMouseLeftClickDelta() {
-		return mouseLeftClickDelta;
-	}
+    fun getMouse(button: Int): Boolean {
+        return mouseButtons[button]
+    }
 
-	@Override
-	public void mouseDragged(MouseEvent event) {
-		mousePosition = new Vector2(event.getX(), event.getY());
-		if (SwingUtilities.isLeftMouseButton(event)) {
-			Vector2 newPosition = new Vector2(event.getX(), event.getY());
-			mouseLeftClickDelta = newPosition.sub(positionOnLeftClickDown);
-		} else {
-			mouseLeftClickDelta = new Vector2(0, 0);
-		}
-	}
+    private fun mouseButtonJustDown(button: Int): Boolean {
+        if (getMouse(button) && !mouseJustDown[button]) {
+            mouseJustDown[button] = true
+            return true
+        } else if (!getMouse(button)) {
+            mouseJustDown[button] = false
+        }
+        return false
+    }
 
-	@Override
-	public void mouseMoved(MouseEvent event) {
-		mousePosition = new Vector2(event.getX(), event.getY());
-	}
+    val isLeftMouseJustPressed: Boolean
+        get() = mouseButtonJustDown(1)
+    val isRightMouseJustPressed: Boolean
+        get() = mouseButtonJustDown(3)
+    val isLeftMousePressed: Boolean
+        get() = getMouse(1)
+    val isRightMousePressed: Boolean
+        get() = getMouse(3)
 
-	@Override
-	public void mouseClicked(MouseEvent event) {
-		mousePosition = new Vector2(event.getX(), event.getY());
-	}
+    override fun mouseDragged(event: MouseEvent) {
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        mouseLeftClickDelta = if (SwingUtilities.isLeftMouseButton(event)) {
+            val newPosition = Vector2(event.x.toFloat(), event.y.toFloat())
+            newPosition.sub(positionOnLeftClickDown)
+        } else {
+            Vector2(0f, 0f)
+        }
+    }
 
-	@Override
-	public void mouseEntered(MouseEvent event) {
-		mousePosition = new Vector2(event.getX(), event.getY());
-	}
+    override fun mouseMoved(event: MouseEvent) {
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+    }
 
-	@Override
-	public void mouseExited(MouseEvent event) {
-		mousePosition = new Vector2(event.getX(), event.getY());
-	}
+    override fun mouseClicked(event: MouseEvent) {
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+    }
 
-	@Override
-	public void mousePressed(MouseEvent event) {
-		int button = event.getButton();
-		mousePosition = new Vector2(event.getX(), event.getY());
+    override fun mouseEntered(event: MouseEvent) {
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+    }
 
-		if (SwingUtilities.isLeftMouseButton(event))
-			positionOnLeftClickDown = mousePosition;
+    override fun mouseExited(event: MouseEvent) {
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+    }
 
-		if (0 < button && button < mouseButtons.length)
-			mouseButtons[button] = true;
-	}
+    override fun mousePressed(event: MouseEvent) {
+        val button = event.button
+        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        if (SwingUtilities.isLeftMouseButton(event)) positionOnLeftClickDown = mousePosition
+        if (0 < button && button < mouseButtons.size) mouseButtons[button] = true
+    }
 
-	@Override
-	public void mouseReleased(MouseEvent event) {
-		
-		int button = event.getButton();
+    override fun mouseReleased(event: MouseEvent) {
+        val button = event.button
+        if (SwingUtilities.isLeftMouseButton(event)) {
+            mouseLeftClickDelta = Vector2(0f, 0f)
+            if (onLeftMouseRelease != null) onLeftMouseRelease!!.run()
+        }
+        if (0 < button && button < mouseButtons.size) mouseButtons[button] = false
+    }
 
-		if (SwingUtilities.isLeftMouseButton(event)) {
-			mouseLeftClickDelta = new Vector2(0, 0);
-			if (onLeftMouseRelease != null)
-				onLeftMouseRelease.run();
-		}
-		
-		if (0 < button && button < mouseButtons.length)
-			mouseButtons[button] = false;
-		
-	}
+    override fun focusGained(event: FocusEvent) {}
+    override fun focusLost(event: FocusEvent) {
+        Arrays.fill(keys, false)
+        Arrays.fill(mouseButtons, false)
+    }
 
-	@Override
-	public void focusGained(FocusEvent event) {
-		
-	}
+    override fun keyPressed(event: KeyEvent) {
+        val key = event.keyCode
+        if (0 < key && key < keys.size) {
+            if (!keys[key] and onPressHandlers.containsKey(key)) {
+                try {
+                    onPressHandlers[key]!!.run()
+                } catch (e: Exception) {
+                    throw RuntimeException(e)
+                }
+            }
+            keys[key] = true
+        }
+    }
 
-	@Override
-	public void focusLost(FocusEvent event)
-	{
-		Arrays.fill(keys, false);
-		Arrays.fill(mouseButtons, false);
-	}
+    override fun keyReleased(event: KeyEvent) {
+        val key = event.keyCode
+        if (0 < key && key < keys.size) keys[key] = false
+    }
 
-	@Override
-	public void keyPressed(KeyEvent event) 
-	{
-		int key = event.getKeyCode();
-		
-		if (0 < key && key < keys.length) {
-			if (!keys[key] & onPressHandlers.containsKey(key)) {
-				try {
-					onPressHandlers.get(key).run();
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			}
-			keys[key] = true;
-		}
-	}
-
-	@Override
-	public void keyReleased(KeyEvent event) 
-	{	
-		int key = event.getKeyCode();
-		
-		if (0 < key && key < keys.length)
-			keys[key] = false;
-		
-	}
-
-	@Override
-	public void keyTyped(KeyEvent event) {
-
-	}
-
-	@Override
-	public void mouseWheelMoved(MouseWheelEvent arg0) {
-		mouseWheelRotation += arg0.getWheelRotation();
-	}
-	
-	public int getMouseWheelRotation() {
-		return mouseWheelRotation;
-	}
-	
-	
-	
+    override fun keyTyped(event: KeyEvent) {}
+    override fun mouseWheelMoved(arg0: MouseWheelEvent) {
+        mouseWheelRotation += arg0.wheelRotation
+    }
 }

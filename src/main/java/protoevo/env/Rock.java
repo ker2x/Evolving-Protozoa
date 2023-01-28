@@ -42,10 +42,10 @@ public class Rock extends Collidable implements Serializable {
     }
 
     private Vector2[] computeBounds() {
-        float minX = Math.min(points[0].getX(), Math.min(points[1].getX(), points[2].getX()));
-        float minY = Math.min(points[0].getY(), Math.min(points[1].getY(), points[2].getY()));
-        float maxX = Math.max(points[0].getX(), Math.max(points[1].getX(), points[2].getX()));
-        float maxY = Math.max(points[0].getY(), Math.max(points[1].getY(), points[2].getY()));
+        float minX = Math.min(points[0].x, Math.min(points[1].x, points[2].x));
+        float minY = Math.min(points[0].y, Math.min(points[1].y, points[2].y));
+        float maxX = Math.max(points[0].x, Math.max(points[1].x, points[2].x));
+        float maxY = Math.max(points[0].y, Math.max(points[1].y, points[2].y));
         return new Vector2[]{new Vector2(minX, minY), new Vector2(maxX, maxY)};
     }
 
@@ -101,8 +101,8 @@ public class Rock extends Collidable implements Serializable {
     }
 
     private float sign(Vector2 p1, Vector2 p2, Vector2 p3) {
-        return (p1.getX() - p3.getX()) * (p2.getY() - p3.getY())
-                - (p2.getX() - p3.getX()) * (p1.getY() - p3.getY());
+        return (p1.x - p3.x) * (p2.y - p3.y)
+                - (p2.x - p3.x) * (p1.y - p3.y);
     }
 
     public boolean pointInside(Vector2 x) {
@@ -142,7 +142,7 @@ public class Rock extends Collidable implements Serializable {
                     continue;
                 bestT = t;
                 collisions[0].point.set(start)
-                        .translate(dirRay.getX() * t, dirRay.getY() * t);
+                        .translate(dirRay.x * t, dirRay.y * t);
                 collisions[0].collided = true;
             }
         }
