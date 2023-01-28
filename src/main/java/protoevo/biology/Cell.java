@@ -174,7 +174,7 @@ public abstract class Cell extends Particle implements Serializable
 		Cell e = binding.getDestinationEntity();
 		if (e.isDead())
 			return true;
-		float dist = e.getPos().sub(getPos()).len();
+		float dist = e.pos.sub(pos).len();
 		float maxDist = 1.3f * (e.getRadius() + getRadius());
 		float minDist = 0.95f * (e.getRadius() + getRadius());
 		return dist > maxDist || dist < minDist;
@@ -340,7 +340,7 @@ public abstract class Cell extends Particle implements Serializable
 
 	@Override
 	public boolean handlePotentialCollision(Rock rock, float delta) {
-		if (rock.pointInside(getPos())) {
+		if (rock.pointInside(pos)) {
 			killCell();
 			return true;
 		}
@@ -410,8 +410,8 @@ public abstract class Cell extends Particle implements Serializable
 
 	public Map<String, Float> getDebugStats() {
 		TreeMap<String, Float> stats = new TreeMap<>();
-		stats.put("Position X", Settings.statsDistanceScalar * getPos().x);
-		stats.put("Position Y", Settings.statsDistanceScalar * getPos().y);
+		stats.put("Position X", Settings.statsDistanceScalar * pos.x);
+		stats.put("Position Y", Settings.statsDistanceScalar * pos.y);
 		return stats;
 	}
 	
@@ -484,7 +484,7 @@ public abstract class Cell extends Particle implements Serializable
 
 		int nChildren = (maxChildren <= 1) ? 2 : 2 + Simulation.RANDOM.nextInt(maxChildren);
 
-		Tank tank = getTank();
+		// Tank tank = tank;	// TODO: fix this
 		for (int i = 0; i < nChildren; i++) {
 			Vector2 dir = new Vector2((float) Math.cos(angle), (float) Math.sin(angle));
 			float p = (float) (0.3 + 0.7 * Simulation.RANDOM.nextDouble() / nChildren);
@@ -495,7 +495,7 @@ public abstract class Cell extends Particle implements Serializable
 				return;
 			try {
 				T child = createChild.apply(getRadius() * p);
-				child.setPos(getPos().add(dir.mul(2 * child.getRadius())));
+				child.pos = pos.add(dir.mul(2 * child.getRadius()));
 				child.setGeneration(getGeneration() + 1);
 				allocateChildResources(child, p);
 				for (Cell otherChild : children)

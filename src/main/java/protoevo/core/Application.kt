@@ -11,7 +11,7 @@ object Application {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val simulation = Simulation()
+        val simulation = Simulation("gaia-ninetales-magni")
         val window = Window("Evolving Protozoa", simulation)
 
         SwingUtilities.invokeLater(window)

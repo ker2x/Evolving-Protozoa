@@ -1,286 +1,226 @@
-package protoevo.core;
+package protoevo.core
 
-import protoevo.env.Rock;
-import protoevo.env.Tank;
-import protoevo.utils.Geometry;
-import protoevo.utils.Vector2;
+import protoevo.env.Rock
+import protoevo.env.Tank
+import protoevo.utils.Geometry.circleIntersectLineCoefficients
+import protoevo.utils.Geometry.doesLineIntersectCircle
+import protoevo.utils.Geometry.getSphereVolume
+import protoevo.utils.Geometry.isPointInsideCircle
+import protoevo.utils.Geometry.lineIntersectCondition
+import protoevo.utils.Vector2
+import java.awt.Color
+import java.io.Serializable
 
-import java.awt.*;
-import java.io.Serializable;
-import java.util.Iterator;
+open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
+    @JvmField
+    var pos: Vector2? = null
+    private var prevPos: Vector2? = null
+    private var vel: Vector2? = null
+    private val acc = Vector2(0f, 0f)
+    private var radius = 0f
+    var recentRigidCollisions = 0
+        private set
 
-public class Particle extends Collidable implements Serializable {
-
-    private static final long serialVersionUID = -4333766895269415282L;
-    private Vector2 pos, prevPos, vel;
-    private final Vector2 acc = new Vector2(0, 0);
-    private float radius;
-    private final Tank tank;
-    private int recentRigidCollisions;
-
-    public Particle(Tank tank) {
-        this.tank = tank;
+    fun resetPhysics() {
+        acc[0f] = 0f
+        recentRigidCollisions = 0
     }
 
-    public void resetPhysics() {
-        acc.set(0, 0);
-        recentRigidCollisions = 0;
+    fun physicsUpdate(delta: Float) {
+        val subStepDelta = delta / Settings.physicsSubSteps
+        for (i in 0 until Settings.physicsSubSteps) physicsStep(subStepDelta)
     }
 
-    public void physicsUpdate(float delta) {
-        float subStepDelta = delta / Settings.physicsSubSteps;
-        for (int i = 0; i < Settings.physicsSubSteps; i++)
-            physicsStep(subStepDelta);
+    open fun physicsStep(delta: Float) {
+        val chunkManager = tank.chunkManager
+        val entities = chunkManager.broadCollisionDetection(pos, radius)
+        entities.forEachRemaining { o: Collidable -> handlePotentialCollision(o, delta) }
+        if (prevPos == null) prevPos = pos!!.copy()
+        vel = if (delta != 0f) pos!!.sub(prevPos!!).scale(1 / delta) else return
+        move(delta)
     }
 
-    public void physicsStep(float delta) {
-        ChunkManager chunkManager = tank.getChunkManager();
-        Iterator<Collidable> entities = chunkManager.broadCollisionDetection(getPos(), radius);
-        entities.forEachRemaining(o -> handlePotentialCollision(o, delta));
-        if (prevPos == null)
-            prevPos = pos.copy();
-
-        if (delta != 0)
-            vel = pos.sub(prevPos).scale(1 / delta);
-        else
-            return;
-
-        move(delta);
+    private fun move(delta: Float) {
+        val verletVel = pos!!.sub(prevPos!!).scale(1f - Settings.tankFluidResistance)
+        val dx = verletVel.translate(acc.mul(delta * delta))
+        if (dx.len2() > Settings.maxParticleSpeed * Settings.maxParticleSpeed) dx.setLength(Settings.maxParticleSpeed)
+        prevPos!!.set(pos!!)
+        pos!!.translate(dx)
     }
 
-    public void move(float delta)
-    {
-        Vector2 verletVel = pos.sub(prevPos).scale(1f - Settings.tankFluidResistance);
-        Vector2 dx = verletVel.translate(acc.mul(delta * delta));
-        if (dx.len2() > Settings.maxParticleSpeed * Settings.maxParticleSpeed)
-            dx.setLength(Settings.maxParticleSpeed);
-        prevPos.set(pos);
-        pos.translate(dx);
+    fun handleBindingConstraint(attached: Particle) {
+        val axis = pos!!.sub(attached.pos!!)
+        val dist = axis.len()
+        val targetDist = 1.1f * (getRadius() + attached.getRadius())
+        val offset = targetDist - dist
+        val axisNorm = axis.unit()
+        val myMass = mass
+        val theirMass = attached.mass
+        val p = myMass / (myMass + theirMass)
+        pos!!.translate(axisNorm.mul((1 - p) * offset))
+        attached.pos!!.translate(axisNorm.mul(-p * offset))
     }
 
-    public void handleBindingConstraint(Particle attached) {
-        Vector2 axis = getPos().sub(attached.getPos());
-        float dist = axis.len();
-        float targetDist = 1.1f * (getRadius() + attached.getRadius());
-        float offset = targetDist - dist;
-        Vector2 axisNorm = axis.unit();
-        float myMass = getMass();
-        float theirMass = attached.getMass();
-        float p = myMass / (myMass + theirMass);
-        getPos().translate(axisNorm.mul((1 - p) * offset));
-        attached.getPos().translate(axisNorm.mul(-p * offset));
+    fun accelerate(da: Vector2?) {
+        acc.translate(da!!)
     }
 
-    public void accelerate(Vector2 da) {
-        acc.translate(da);
+    override fun pointInside(p: Vector2): Boolean {
+        return isPointInsideCircle(pos!!, getRadius(), p)
     }
 
-    @Override
-    public boolean pointInside(Vector2 p) {
-        return Geometry.isPointInsideCircle(getPos(), getRadius(), p);
+    override fun rayIntersects(start: Vector2, end: Vector2): Boolean {
+        return false
     }
 
-    @Override
-    public boolean rayIntersects(Vector2 start, Vector2 end) {
-        return false;
-    }
+    private val tmp = Vector2(0f, 0f)
+    private val collision = arrayOf(
+        Vector2(0f, 0f), Vector2(0f, 0f)
+    )
 
-    private final Vector2 tmp = new Vector2(0, 0);
-    private final Vector2[] collision = new Vector2[]{
-            new Vector2(0, 0), new Vector2(0, 0)
-    };
-
-    public void rayCollisions(Vector2 start, Vector2 end, Collision[] collisions) {
-        for (Collision collision : collisions)
-            collision.collided = false;
-
-        Vector2 ray = end.take(start).nor();
-        Vector2 p = collisions[0].point.set(getPos()).take(start);
-
-        float a = ray.len2();
-        float b = -2 * ray.dot(p);
-        float c = p.len2() - getRadius() * getRadius();
-
-        float d = b*b - 4*a*c;
-        boolean doesIntersect = d != 0;
-        if (!doesIntersect)
-            return;
-
-        float l1 = (float) ((-b + Math.sqrt(d)) / (2*a));
-        float l2 = (float) ((-b - Math.sqrt(d)) / (2*a));
-
+    override fun rayCollisions(start: Vector2, end: Vector2, collisions: Array<Collision>) {
+        for (collision in collisions) collision.collided = false
+        val ray = end.take(start).nor()
+        val p = collisions[0].point.set(pos!!).take(start)
+        val a = ray.len2()
+        val b = -2 * ray.dot(p)
+        val c = p.len2() - getRadius() * getRadius()
+        val d = b * b - 4 * a * c
+        val doesIntersect = d != 0f
+        if (!doesIntersect) return
+        val l1 = ((-b + Math.sqrt(d.toDouble())) / (2 * a)).toFloat()
+        val l2 = ((-b - Math.sqrt(d.toDouble())) / (2 * a)).toFloat()
         if (l1 > 0) {
-            collisions[0].collided = true;
-            collisions[0].point.set(start).translate(ray.x * l1, ray.y * l1);
+            collisions[0].collided = true
+            collisions[0].point.set(start).translate(ray.x * l1, ray.y * l1)
         } else if (l2 > 0) {
-            collisions[1].collided = true;
-            collisions[1].point.set(start).translate(ray.x * l2, ray.y * l2);
+            collisions[1].collided = true
+            collisions[1].point.set(start).translate(ray.x * l2, ray.y * l2)
         }
     }
 
-    @Override
-    public boolean handlePotentialCollision(Collidable other, float delta) {
-        if (other instanceof Particle)
-            return handlePotentialCollision((Particle) other, delta);
-        else if (other instanceof Rock)
-            return handlePotentialCollision((Rock) other, delta);
-        return false;
+    override fun handlePotentialCollision(other: Collidable, delta: Float): Boolean {
+        if (other is Particle) return handlePotentialCollision(
+            other,
+            delta
+        ) else if (other is Rock) return handlePotentialCollision(
+            other, delta
+        )
+        return false
     }
 
-    public void onParticleCollisionCallback(Particle p, float delta) {}
-
-    private final Vector2 tmp1 = new Vector2(0, 0);
-    public void handleParticleCollision(Particle p, float delta) {
-        float mr = p.getMass() / (p.getMass() + getMass());
-        Vector2 axis = tmp1.set(getPos()).take(p.getPos());
-        float dist = axis.len();
-        float targetDist = (getRadius() + p.getRadius());
-        float offset = targetDist - dist;
-        Vector2 axisNorm = axis.nor();
-        getPos().translate(axisNorm.scale(mr * offset));
-        p.getPos().translate(axisNorm.scale(-(1 - mr) / mr));
-        onParticleCollisionCallback(p, delta);
+    open fun onParticleCollisionCallback(p: Particle?, delta: Float) {}
+    private val tmp1 = Vector2(0f, 0f)
+    private fun handleParticleCollision(p: Particle, delta: Float) {
+        val mr = p.mass / (p.mass + mass)
+        val axis = tmp1.set(pos!!).take(p.pos!!)
+        val dist = axis.len()
+        val targetDist = getRadius() + p.getRadius()
+        val offset = targetDist - dist
+        val axisNorm = axis.nor()
+        pos!!.translate(axisNorm.scale(mr * offset))
+        p.pos!!.translate(axisNorm.scale(-(1 - mr) / mr))
+        onParticleCollisionCallback(p, delta)
     }
 
-    public boolean handlePotentialCollision(Particle e, float delta) {
-        if (e == this)
-            return false;
-
-        float sqDist = e.getPos().squareDistanceTo(getPos());
-        float r = getRadius() + e.getRadius();
-
-        if (sqDist < r*r)
-            handleParticleCollision(e, delta);
-
-        return true;
+    open fun handlePotentialCollision(e: Particle, delta: Float): Boolean {
+        if (e === this) return false
+        val sqDist = e.pos!!.squareDistanceTo(pos!!)
+        val r = getRadius() + e.getRadius()
+        if (sqDist < r * r) handleParticleCollision(e, delta)
+        return true
     }
 
-    public void onRockCollisionCallback(Rock rock, float delta) {}
-
-    public boolean handlePotentialCollision(Rock rock, float delta) {
-        Vector2[][] edges = rock.getEdges();
-        Vector2 pos = getPos();
-        float r = getRadius();
-
-        for (int i = 0; i < edges.length; i++) {
-            Vector2[] edge = edges[i];
-            Vector2 normal = rock.getNormals()[i];
-            Vector2 dir = edge[1].sub(edge[0]);
-            Vector2 x = pos.sub(edge[0]);
-
-            if (dir.dot(normal) > 0)
-                continue;
-
-            float[] coefs = Geometry.circleIntersectLineCoefficients(dir, x, r);
-            if (Geometry.lineIntersectCondition(coefs)) {
-                float t1 = coefs[0], t2 = coefs[1];
-                float t = (t1 + t2) / 2f;
-                float offset = r - x.sub(dir.mul(t)).len();
-                pos.translate(normal.mul(offset));
-                recentRigidCollisions++;
-                onRockCollisionCallback(rock, delta);
-                return true;
+    private fun onRockCollisionCallback(rock: Rock?, delta: Float) {}
+    open fun handlePotentialCollision(rock: Rock, delta: Float): Boolean {
+        val edges = rock.edges
+        val pos = pos
+        val r = getRadius()
+        for (i in edges.indices) {
+            val edge = edges[i]
+            val normal = rock.normals[i]
+            val dir = edge[1].sub(edge[0])
+            val x = pos!!.sub(edge[0])
+            if (dir.dot(normal) > 0) continue
+            val coefs = circleIntersectLineCoefficients(dir, x, r)
+            if (lineIntersectCondition(coefs)) {
+                val t1 = coefs!![0]
+                val t2 = coefs[1]
+                val t = (t1 + t2) / 2f
+                val offset = r - x.sub(dir.mul(t)).len()
+                pos.translate(normal.mul(offset))
+                recentRigidCollisions++
+                onRockCollisionCallback(rock, delta)
+                return true
             }
         }
-        return false;
+        return false
     }
 
-    public boolean isCollidingWith(Collidable other) {
-        if (other instanceof Particle)
-            return isCollidingWith((Particle) other);
-        else if (other instanceof Rock)
-            return isCollidingWith((Rock) other);
-        return false;
+    fun isCollidingWith(other: Collidable?): Boolean {
+        if (other is Particle) return isCollidingWith(other) else if (other is Rock) return isCollidingWith(other)
+        return false
     }
 
-    public boolean isCollidingWith(Rock rock) {
-        Vector2[][] edges = rock.getEdges();
-        float r = getRadius();
-        Vector2 pos = getPos();
-
-        if (rock.pointInside(pos))
-            return true;
-
-        for (Vector2[] edge : edges) {
-            if (Geometry.doesLineIntersectCircle(edge, pos, r))
-                return true;
+    fun isCollidingWith(rock: Rock): Boolean {
+        val edges = rock.edges
+        val r = getRadius()
+        val pos = pos
+        if (rock.pointInside(pos)) return true
+        for (edge in edges) {
+            if (doesLineIntersectCircle(edge, pos!!, r)) return true
         }
-        return false;
+        return false
     }
 
-    public boolean isCollidingWith(Particle other)
-    {
-        if (other == this)
-            return false;
-        float r = getRadius() + other.getRadius();
-        return other.getPos().squareDistanceTo(getPos()) < r*r;
+    fun isCollidingWith(other: Particle): Boolean {
+        if (other === this) return false
+        val r = getRadius() + other.getRadius()
+        return other.pos!!.squareDistanceTo(pos!!) < r * r
     }
 
-    public Vector2 getPos() {
-        return pos;
+    fun getVel(): Vector2 {
+        return vel ?: Vector2(0f, 0f)
     }
 
-    public void setPos(Vector2 pos) {
-        this.pos = pos;
+    val speed: Float
+        get() = if (vel == null) 0f else vel!!.len()
+    open val mass: Float
+        get() = getMass(getRadius())
+
+    fun getMass(r: Float): Float {
+        return getMass(r, 0f)
     }
 
-    public Vector2 getVel() {
-        if (vel == null)
-            return new Vector2(0, 0);
-        return vel;
+    fun getMass(r: Float, extraMass: Float): Float {
+        return getSphereVolume(r) * massDensity + extraMass
     }
 
-    public float getSpeed() {
-        if (vel == null)
-            return 0f;
-        return vel.len();
+    val massDensity: Float
+        get() = 1000f
+
+    override fun getBoundingBox(): Array<Vector2> {
+        val x = pos!!.x
+        val y = pos!!.y
+        val r = getRadius()
+        return arrayOf(Vector2(x - r, y - r), Vector2(x + r, y + r))
     }
 
-    public float getMass() {
-        return getMass(getRadius());
+    fun getRadius(): Float {
+        return radius
     }
 
-    public float getMass(float r) {
-        return getMass(r, 0);
+    fun setRadius(radius: Float) {
+        this.radius = radius
+        if (this.radius > Settings.maxParticleRadius) this.radius = Settings.maxParticleRadius
+        if (this.radius < Settings.minParticleRadius) this.radius = Settings.minParticleRadius
     }
 
-    public float getMass(float r, float extraMass) {
-        return Geometry.getSphereVolume(r) * getMassDensity() + extraMass;
+    override fun getColor(): Color {
+        return Color.WHITE.darker()
     }
 
-    public float getMassDensity() {
-        return 1000f;
-    }
-
-    public Vector2[] getBoundingBox() {
-        float x = pos.x;
-        float y = pos.y;
-        float r = getRadius();
-        return new Vector2[]{new Vector2(x - r, y - r), new Vector2(x + r, y + r)};
-    }
-
-    public float getRadius() {
-        return radius;
-    }
-
-    public void setRadius(float radius) {
-        this.radius = radius;
-        if (this.radius > Settings.maxParticleRadius)
-            this.radius = Settings.maxParticleRadius;
-        if (this.radius < Settings.minParticleRadius)
-            this.radius = Settings.minParticleRadius;
-    }
-
-    public Tank getTank() {
-        return tank;
-    }
-
-    public int getRecentRigidCollisions() {
-        return recentRigidCollisions;
-    }
-
-    @Override
-    public Color getColor() {
-        return Color.WHITE.darker();
+    companion object {
+        private const val serialVersionUID = -4333766895269415282L
     }
 }

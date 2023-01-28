@@ -70,7 +70,7 @@ public class Controller
 				if (isPosInChunk(pos, chunk)) {
 					for (Cell e : chunk.getCells())
 					{
-						Vector2 s = renderer.toRenderSpace(e.getPos());
+						Vector2 s = renderer.toRenderSpace(e.pos);
 						double r = renderer.toRenderSpace(e.getRadius());
 						if (s.sub(pos).len2() < r*r)
 						{
@@ -93,7 +93,7 @@ public class Controller
 		synchronized (simulation.getTank()) {
 			for (Chunk chunk : simulation.getTank().getChunkManager().getChunks()) {
 				for (Cell cell : chunk.getCells()) {
-					Vector2 cellPos = renderer.toRenderSpace(cell.getPos());
+					Vector2 cellPos = renderer.toRenderSpace(cell.pos);
 					Vector2 dir = cellPos.sub(pos);
 					float dist = dir.len2();
 					int i = 0;
@@ -102,7 +102,7 @@ public class Controller
 						float strength = 1 / 100f;
 						dir.setLength(strength * p * tank.getRadius() / 8);
 						cell.physicsStep(Settings.simulationUpdateDelta);
-						cell.getPos().translate(dir);
+						cell.pos.translate(dir);
 						dist = cellPos.sub(pos).len2();
 						i++;
 					}

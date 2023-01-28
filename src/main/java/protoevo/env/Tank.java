@@ -155,12 +155,12 @@ public class Tank implements Iterable<Cell>, Serializable
 	}
 
 	public void handleTankEdge(Cell e) {
-		float rPos = e.getPos().len();
+		float rPos = e.pos.len();
 		if (Settings.sphericalTank && rPos - e.getRadius() > radius)
-			e.getPos().setLength(-0.98f * radius);
+			e.pos.setLength(-0.98f * radius);
 		else if (rPos + e.getRadius() > radius) {
-			e.getPos().setLength(radius - e.getRadius());
-			Vector2 normal = e.getPos().unit().scale(-1);
+			e.pos.setLength(radius - e.getRadius());
+			Vector2 normal = e.pos.unit().scale(-1);
 			e.getVel().translate(normal.mul(-2*normal.dot(e.getVel())));
 		}
 
@@ -328,7 +328,7 @@ public class Tank implements Iterable<Cell>, Serializable
 
     public void addRandom(Cell e, Function<Float, Vector2> findPosition) {
 		for (int i = 0; i < 5; i++) {
-			e.setPos(findPosition.apply(e.getRadius()));
+			e.pos = findPosition.apply(e.getRadius());
 			if (!isCollidingWithAnything(e)) {
 				add(e);
 				return;

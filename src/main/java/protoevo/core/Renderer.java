@@ -74,7 +74,7 @@ public class Renderer extends Canvas
 	
 	public void retina(Graphics2D g, Protozoan p)
 	{
-		Vector2 pos = toRenderSpace(p.getPos());
+		Vector2 pos = toRenderSpace(p.pos);
 		float r = toRenderSpace(p.getRadius());
 		
 		Color c = p.getColor();
@@ -151,7 +151,7 @@ public class Renderer extends Canvas
 	
 	public void protozoa(Graphics2D g, Protozoan p)
 	{
-		Vector2 pos = toRenderSpace(p.getPos());
+		Vector2 pos = toRenderSpace(p.pos);
 		float r = toRenderSpace(p.getRadius());
 
 		if (circleNotVisible(pos, r))
@@ -283,7 +283,7 @@ public class Renderer extends Canvas
 	
 	public void pellet(Graphics2D g, EdibleCell p)
 	{
-		Vector2 pos = toRenderSpace(p.getPos());
+		Vector2 pos = toRenderSpace(p.pos);
 		float r = toRenderSpace(p.getRadius());
 		drawOutlinedCircle(g, pos, r, p.getColor());
 		if (simulation.inDebugMode())
@@ -328,7 +328,7 @@ public class Renderer extends Canvas
 
 	public void renderEntityAttachments(Graphics2D g, Cell e) {
 		float r1 = toRenderSpace(e.getRadius());
-		Vector2 ePos = toRenderSpace(e.getPos());
+		Vector2 ePos = toRenderSpace(e.pos);
 		if (circleNotVisible(ePos, r1) || e.getCellBindings().isEmpty())
 			return;
 
@@ -343,7 +343,7 @@ public class Renderer extends Canvas
 			float r = Math.min(r1, r2);
 			Stroke s = g.getStroke();
 			g.setStroke(new BasicStroke(1.5f * r));
-			Vector2 attachedPos = toRenderSpace(attached.getPos());
+			Vector2 attachedPos = toRenderSpace(attached.pos);
 			Color attachedColor = attached.getColor();
 			g.setColor(new Color(
 					(red + attachedColor.getRed()) / 2,
@@ -369,7 +369,7 @@ public class Renderer extends Canvas
 
 			ChunkManager chunkManager = tank.getChunkManager();
 			Iterator<Collidable> collisionEntities = chunkManager.broadCollisionDetection(
-					track.getPos(), track.getRadius());
+                    track.pos, track.getRadius());
 			collisionEntities.forEachRemaining(
 					o -> {
 						stats.put("Broad Collision", 1 + stats.getOrDefault("Broad Collision", 0));
@@ -382,7 +382,7 @@ public class Renderer extends Canvas
 				drawCollisionBounds(g, track, p.getInteractRange(), Color.WHITE.darker());
 
 				Iterator<Cell> interactCells = chunkManager.broadEntityDetection(
-						track.getPos(), p.getInteractRange());
+                        track.pos, p.getInteractRange());
 
 
 				while (interactCells.hasNext()) {
@@ -516,7 +516,7 @@ public class Renderer extends Canvas
 	}
 
 	public void drawCollisionBounds(Graphics2D g, Cell e, float r, Color color) {
-		Vector2 pos = toRenderSpace(e.getPos());
+		Vector2 pos = toRenderSpace(e.pos);
 		r = toRenderSpace(r);
 		if (!circleNotVisible(pos, r))
 			drawCircle(g, pos, r, color, window.getHeight() / 500);
@@ -713,7 +713,7 @@ public class Renderer extends Canvas
 					.translate(tankRenderCoords);
 		else {
 			return v.copy()
-					.take(track.getPos())
+					.take(track.pos)
 //					.rotate(rotate)
 					.scale(tankRenderRadius * zoom / simulation.getTank().getRadius())
 					.translate(tankRenderCoords);
@@ -747,7 +747,7 @@ public class Renderer extends Canvas
 		if (e != null)
 			pan = new Vector2(0, 0);
 		else if (track != null)
-			pan = track.getPos().mul(tankRenderRadius);
+			pan = track.pos.mul(tankRenderRadius);
 		track = e;
 	}
 

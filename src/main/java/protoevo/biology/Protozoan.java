@@ -83,7 +83,7 @@ public class Protozoan extends Cell
 		setGrowthRate(genome.getGrowthRate());
 		splitRadius = genome.getSplitRadius();
 
-		setPos(new Vector2(0, 0));
+		pos = new Vector2(0, 0);
 		float t = (float) (2 * Math.PI * Simulation.RANDOM.nextDouble());
 		dir.set(
 			(float) (0.1f * Math.cos(t)),
@@ -118,7 +118,7 @@ public class Protozoan extends Cell
 	}
 
 	public Vector2 getSensorPosition(ContactSensor sensor) {
-		return getPos().add(dir.rotate(sensor.angle).setLength(1.01f * getRadius()));
+		return pos.add(dir.rotate(sensor.angle).setLength(1.01f * getRadius()));
 	}
 
 	@Override
@@ -136,8 +136,8 @@ public class Protozoan extends Cell
 	public boolean cullFromRayCasting(Collidable o) {
 		if (o instanceof Particle) {
 			Particle p = (Particle) o;
-			float dx = p.getPos().x - getPos().x;
-			float dy = p.getPos().y - getPos().y;
+			float dx = p.pos.x - pos.x;
+			float dy = p.pos.y - pos.y;
 			float d2 = dx * dx + dy * dy;
 			float dirX = getDir().x;
 			float dirY = getDir().y;
@@ -156,7 +156,7 @@ public class Protozoan extends Cell
 		if (cullFromRayCasting(o))
 			return;
 
-		rayStartTmp.set(getPos());
+		rayStartTmp.set(pos);
 		float interactRange = getInteractRange();
 		float dirAngle = getDir().angle();
 		for (Retina.Cell cell : retina.getCells()) {
@@ -226,7 +226,7 @@ public class Protozoan extends Cell
 		float work = .5f * getMass() * vel.len2();
 		if (enoughEnergyAvailable(work)) {
 			useEnergy(work);
-			getPos().translate(vel.scale(delta));
+			pos.translate(vel.scale(delta));
 		}
 	}
 
@@ -236,7 +236,7 @@ public class Protozoan extends Cell
 
 	private Protozoan createSplitChild(float r) throws MiscarriageException {
 		float stuntingFactor = r / getRadius();
-		Protozoan child = genome.createChild(getTank(), crossOverGenome);
+		Protozoan child = genome.createChild(tank, crossOverGenome);
 		child.setRadius(stuntingFactor * child.getRadius());
 		return child;
 	}
@@ -260,7 +260,7 @@ public class Protozoan extends Cell
 
 	public void interact(Cell other, float delta) {
 
-		float d = other.getPos().distanceTo(getPos());
+		float d = other.pos.distanceTo(pos);
 		if (d - other.getRadius() > getInteractRange())
 			return;
 
@@ -304,9 +304,9 @@ public class Protozoan extends Cell
 	}
 
 	private boolean spikeInContact(Spike spike, float spikeLen, Cell other) {
-		Vector2 spikeStartPos = getDir().unit().rotate(spike.angle).setLength(getRadius()).translate(getPos());
-		Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(getPos()).setLength(spikeLen));
-		return other.getPos().sub(spikeEndPos).len2() < other.getRadius() * other.getRadius();
+		Vector2 spikeStartPos = getDir().unit().rotate(spike.angle).setLength(getRadius()).translate(pos);
+		Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen));
+		return other.pos.sub(spikeEndPos).len2() < other.getRadius() * other.getRadius();
 	}
 
 	public float getInteractRange() {
@@ -319,14 +319,14 @@ public class Protozoan extends Cell
 		super.handleInteractions(delta);
 		wasJustDamaged = false;
 		retina.reset();
-		ChunkManager chunkManager = getTank().getChunkManager();
+		ChunkManager chunkManager = tank.getChunkManager();
 		Iterator<Collidable> entities = chunkManager
-				.broadCollisionDetection(getPos(), getInteractRange());
+				.broadCollisionDetection(pos, getInteractRange());
 		entities.forEachRemaining(e -> interact(e, delta));
 	}
 
 	private void breakIntoPellets() {
-		burst(MeatCell.class, r -> new MeatCell(r, getTank()));
+		burst(MeatCell.class, r -> new MeatCell(r, tank));
 	}
 
 	public void handleDeath() {

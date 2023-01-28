@@ -118,7 +118,7 @@ public class ChunkManager implements Serializable {
     }
 
     public Chunk getChunk(Cell e) {
-        return getChunk(e.getPos());
+        return getChunk(e.pos);
     }
 
     public Chunk getChunk(Vector2 pos) {

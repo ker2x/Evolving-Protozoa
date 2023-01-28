@@ -39,7 +39,7 @@ public class PlantCell extends EdibleCell {
         boolean collision = super.handlePotentialCollision(p, delta);
         if (p != this && p instanceof PlantCell) {
             PlantCell otherPlant = (PlantCell) p;
-            force.set(p.getPos()).take(getPos());
+            force.set(p.pos).take(pos);
             float sqDist = force.len2();
             float r = getRadius() + otherPlant.getRadius();
             if (sqDist > 1.01f*r*r && !isAttached(otherPlant)) {
@@ -69,7 +69,7 @@ public class PlantCell extends EdibleCell {
     }
 
     private void updateCrowding(Cell e) {
-        float sqDist = e.getPos().squareDistanceTo(getPos());
+        float sqDist = e.pos.squareDistanceTo(pos);
         if (sqDist < Math.pow(3 * getRadius(), 2)) {
             crowdingFactor += e.getRadius() / (getRadius() + sqDist);
         }
@@ -83,8 +83,8 @@ public class PlantCell extends EdibleCell {
             return;
 
         crowdingFactor = 0;
-        ChunkManager chunkManager = getTank().getChunkManager();
-        Iterator<Cell> entities = chunkManager.broadEntityDetection(getPos(), getRadius());
+        ChunkManager chunkManager = tank.getChunkManager();
+        Iterator<Cell> entities = chunkManager.broadEntityDetection(pos, getRadius());
         entities.forEachRemaining(this::updateCrowding);
 
         if (getGrowthRate() < 0f)
@@ -94,7 +94,7 @@ public class PlantCell extends EdibleCell {
         addAvailableEnergy(delta / 3f);
 
         if (shouldSplit())
-            burst(PlantCell.class, r -> new PlantCell(r, getTank()));
+            burst(PlantCell.class, r -> new PlantCell(r, tank));
     }
 
     /**
