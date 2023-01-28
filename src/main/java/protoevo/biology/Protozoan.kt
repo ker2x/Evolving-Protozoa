@@ -11,6 +11,7 @@ import protoevo.core.Simulation
 import protoevo.env.Tank
 import protoevo.utils.Vector2
 import java.io.Serializable
+import kotlin.math.pow
 
 class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) {
     @JvmField
@@ -18,12 +19,12 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
     var id = Simulation.RANDOM.nextInt()
     private var crossOverGenome: ProtozoaGenome? = null
     var mate: Protozoan? = null
-        private set
+        //private set
     private var timeMating = 0f
     private var retina: Retina
     @JvmField
-	val brain: Brain
-    var shieldFactor = 1.3f
+	val brain: Brain = genome.brain()
+    private var shieldFactor = 1.3f
     private val attackFactor = 10f
     private var deathRate = 0f
     private val herbivoreFactor: Float
@@ -113,7 +114,6 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
     )
 
     init {
-        brain = genome.brain()
         retina = genome.retina()
         spikes = genome.spikes
         herbivoreFactor = genome.herbivoreFactor
@@ -142,7 +142,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         if (camProduction != null) for (cam in camProduction.keys) setCAMProductionRate(cam, camProduction[cam]!!)
     }
 
-    fun see(o: Collidable) {
+    private fun see(o: Collidable) {
         if (cullFromRayCasting(o)) return
         rayStartTmp.set(pos!!)
         val interactRange = interactRange
@@ -163,7 +163,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         }
     }
 
-    fun eat(e: EdibleCell?, delta: Float) {
+    private fun eat(e: EdibleCell?, delta: Float) {
         var extraction = 1f
         if (e is PlantCell) {
             if (spikes.size > 0) extraction *= Math.pow(
@@ -177,19 +177,19 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         extractFood(e, extraction * delta)
     }
 
-    fun damage(damage: Float) {
+    private fun damage(damage: Float) {
         wasJustDamaged = true
         health = health - damage
     }
 
-    fun attack(p: Protozoan, spike: Spike, delta: Float) {
+    private fun attack(p: Protozoan, spike: Spike, delta: Float) {
         val myAttack =
             (2 * health + Settings.spikeDamage * getSpikeLength(spike) + 2 * Simulation.RANDOM.nextDouble()).toFloat()
         val theirDefense: Float = (2 * p.health + 0.3 * p.radius + 2 * Simulation.RANDOM.nextDouble()).toFloat()
         if (myAttack > p.shieldFactor * theirDefense) p.damage(delta * attackFactor * (myAttack - p.shieldFactor * theirDefense))
     }
 
-    fun think(delta: Float) {
+    private fun think(delta: Float) {
         brain.tick(this)
         dir.turn(delta * 80 * brain.turn(this))
         val spikeDecay = Math.pow(Settings.spikeMovementPenaltyFactor.toDouble(), spikes.size.toDouble()).toFloat()
@@ -215,7 +215,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         return child
     }
 
-    fun interact(other: Collidable, delta: Float) {
+    private fun interact(other: Collidable, delta: Float) {
         if (other === this) return
         if (isDead) {
             handleDeath()
@@ -227,7 +227,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         }
     }
 
-    fun interact(other: Cell, delta: Float) {
+    private fun interact(other: Cell, delta: Float) {
         val d = other.pos!!.distanceTo(pos!!)
         if (d - other.radius > interactRange) return
         if (shouldSplit()) {
@@ -327,8 +327,8 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
     fun age(delta: Float) {
         deathRate = radius * delta * Settings.protozoaStarvationFactor
         //		deathRate *= 0.75f + 0.25f * getSpeed();
-        deathRate *= Math.pow(Settings.spikeDeathRatePenalty.toDouble(), spikes.size.toDouble()).toFloat()
-        health = health - deathRate
+        deathRate *= Settings.spikeDeathRatePenalty.pow(spikes.size).toFloat()
+        health -= deathRate
     }
 
     override fun update(delta: Float) {
