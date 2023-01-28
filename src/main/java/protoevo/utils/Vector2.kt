@@ -1,6 +1,7 @@
 package protoevo.utils
 
 import java.io.Serializable
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 class Vector2(x: Float, y: Float) : Serializable {
@@ -17,11 +18,16 @@ class Vector2(x: Float, y: Float) : Serializable {
 
     fun len2() :Float = x * x + y * y
     fun len() :Float = sqrt(x * x + y * y)
+    fun copy(): Vector2 = Vector2(x, y)
 
+    fun add(b: Vector2): Vector2 = Vector2(x + b.x, y + b.y)
+    fun sub(b: Vector2): Vector2 = Vector2(x - b.x, y - b.y)
+    fun mul(s: Float): Vector2 = Vector2(x * s, y * s)
+    fun dot(b: Vector2?): Float = x * b!!.x + y * b.y
+    fun perp(): Vector2 = Vector2(-y, x)
+    fun angle(): Float = atan2(y.toDouble(), x.toDouble()).toFloat()
 
-    fun copy(): Vector2 {
-        return Vector2(x, y)
-    }
+    fun unit(): Vector2 = if (len() == 0f) Vector2(0f, 0f) else Vector2(x / len(), y / len())
 
     fun translate(dv: Vector2): Vector2 {
         x += dv.x
@@ -41,13 +47,6 @@ class Vector2(x: Float, y: Float) : Serializable {
         return this
     }
 
-    fun add(b: Vector2): Vector2 = Vector2(x + b.x, y + b.y)
-    fun sub(b: Vector2): Vector2 = Vector2(x - b.x, y - b.y)
-    fun mul(s: Float): Vector2 = Vector2(x * s, y * s)
-    fun dot(b: Vector2?): Float = x * b!!.x + y * b.y
-    fun perp(): Vector2 = Vector2(-y, x)
-
-
     fun rotate(angle: Float): Vector2 {
         val c = CachedMath.cos(angle)
         val s = CachedMath.sin(angle)
@@ -60,26 +59,19 @@ class Vector2(x: Float, y: Float) : Serializable {
         val xNew = x * c - y * s
         y = x * s + y * c
         x = xNew
-        //y = yNew
         return this
-    }
-
-    fun unit(): Vector2 {
-        val len = len()
-        return if (len == 0f) Vector2(0f, 0f) else Vector2(x / len, y / len)
     }
 
     fun nor(): Vector2 {
         val len = len()
-        if (len == 0f) return this
-        x /= len
-        y /= len
+        if (len != 0f) {
+            x /= len
+            y /= len
+        }
         return this
     }
 
-    fun angle(): Float {
-        return Math.atan2(y.toDouble(), x.toDouble()).toFloat()
-    }
+
 
     fun setLength(targetLen: Float): Vector2 {
         val currentLen = len()
