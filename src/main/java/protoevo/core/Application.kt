@@ -1,64 +1,47 @@
-package protoevo.core;
+package protoevo.core
 
-import javax.swing.SwingUtilities;
+import protoevo.utils.REPL
+import protoevo.utils.TextStyle
+import protoevo.utils.Window
+import javax.swing.SwingUtilities
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
-import protoevo.utils.REPL;
-import protoevo.utils.TextStyle;
-import protoevo.utils.Window;
+object Application {
+    var simulation: Simulation? = null
+    var window: Window? = null
+    const val refreshDelay = 1000 / 120f
+    fun parseArgs(args: Array<String>): Map<String, String> {
+        val argsMap: MutableMap<String, String> = HashMap()
+        for (arg in args) {
+            val split = arg.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            if (split.size == 2) {
+                if (split[1] != "") argsMap[split[0]] = split[1]
+            }
+        }
+        return argsMap
+    }
 
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val argsMap = parseArgs(args)
+        if (argsMap.containsKey("-save")) simulation = Simulation(argsMap["-save"]) else simulation = Simulation()
+        try {
+            if (!(args.size > 0 && args[0] == "noui")) {
+                TextStyle.loadFonts()
+                window = Window("Evolving Protozoa", simulation)
+                SwingUtilities.invokeLater(window)
+            } else {
+                simulation!!.setUpdateDelay(0f)
+            }
+            Thread(REPL(simulation, window)).start()
+            simulation!!.simulate()
+        } catch (e: Exception) {
+            simulation!!.close()
+            throw e
+        }
+    }
 
-public class Application 
-{
-	public static Simulation simulation;
-	public static Window window;
-	
-	public static final float refreshDelay = 1000 / 120f;
-
-	public static Map<String, String> parseArgs(String[] args) {
-		Map<String, String> argsMap = new HashMap<>();
-		for (String arg: args) {
-			String[] split = arg.split("=");
-			if (split.length == 2) {
-				if (!split[1].equals(""))
-					argsMap.put(split[0], split[1]);
-			}
-		}
-		return argsMap;
-	}
-	
-	public static void main(String[] args)
-	{
-		Map<String, String> argsMap = parseArgs(args);
-		if (argsMap.containsKey("-save"))
-			simulation = new Simulation(argsMap.get("-save"));
-		else
-			simulation = new Simulation();
-
-		try {
-			if (!(args.length > 0 && args[0].equals("noui"))) {
-				TextStyle.loadFonts();
-				window = new Window("Evolving Protozoa", simulation);
-				SwingUtilities.invokeLater(window);
-			}
-			else {
-				simulation.setUpdateDelay(0);
-			}
-			new Thread(new REPL(simulation, window)).start();
-			simulation.simulate();
-		}
-		catch (Exception e) {
-			simulation.close();
-			throw e;
-		}
-	}
-	
-	public static void exit()
-	{
-		System.exit(0);
-	}
+    @JvmStatic
+	fun exit() {
+        System.exit(0)
+    }
 }
