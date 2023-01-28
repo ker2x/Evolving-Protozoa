@@ -99,7 +99,7 @@ public class Tank implements Iterable<Cell>, Serializable
 
 		StringBuilder headerStr = new StringBuilder();
 		headerStr.append("Generation,Time Elapsed,Parent 1 ID,Parent 2 ID,ID,");
-		for (Gene<?> gene : protozoan.getGenome().getGenes())
+		for (Gene<?> gene : protozoan.genome.getGenes())
 			headerStr.append(gene.getTraitName()).append(",");
 
 		FileIO.appendLine(genomeFile, headerStr.toString());
@@ -123,7 +123,9 @@ public class Tank implements Iterable<Cell>, Serializable
 		for (int i = 0; i < Settings.numInitialProtozoa; i++) {
 			try {
 				addRandom(new Protozoan(this), findProtozoaPosition);
-			} catch (MiscarriageException ignored) {}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -223,7 +225,7 @@ public class Tank implements Iterable<Cell>, Serializable
 		generation = Math.max(generation, p.getGeneration());
 
 		if (genomeFile != null && Settings.writeGenomes) {
-			String genomeLine = p.getGeneration() + "," + elapsedTime + "," + p.getGenome().toString();
+			String genomeLine = p.getGeneration() + "," + elapsedTime + "," + p.genome.toString();
 			genomesToWrite.add(genomeLine);
 		}
 	}

@@ -1,467 +1,373 @@
-package protoevo.biology;
+package protoevo.biology
 
-import protoevo.biology.genes.CAMProductionGene;
-import protoevo.biology.genes.ProtozoaGenome;
-import protoevo.biology.genes.RetinalProductionGene;
-import protoevo.core.*;
-import protoevo.env.Tank;
-import protoevo.neat.NeuralNetwork;
-import protoevo.utils.Vector2;
+import protoevo.biology.Protozoan
+import protoevo.biology.genes.CAMProductionGene
+import protoevo.biology.genes.ProtozoaGenome
+import protoevo.biology.genes.RetinalProductionGene
+import protoevo.core.Collidable
+import protoevo.core.Particle
+import protoevo.core.Settings
+import protoevo.core.Simulation
+import protoevo.env.Tank
+import protoevo.utils.Vector2
+import java.io.Serializable
 
-import java.io.Serializable;
-import java.util.Iterator;
-import java.util.Map;
+class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) {
+    @JvmField
+	@Transient
+    var id = Simulation.RANDOM.nextInt()
+    private var crossOverGenome: ProtozoaGenome? = null
+    var mate: Protozoan? = null
+        private set
+    private var timeMating = 0f
+    private var retina: Retina
+    @JvmField
+	val brain: Brain
+    var shieldFactor = 1.3f
+    private val attackFactor = 10f
+    private var deathRate = 0f
+    private val herbivoreFactor: Float
+    private val splitRadius: Float
+    @JvmField
+	val dir = Vector2(0f, 0f)
 
-public class Protozoan extends Cell
-{
+    class Spike : Serializable {
+        @JvmField
+		var length = 0f
+        @JvmField
+		var angle = 0f
+        @JvmField
+		var growthRate = 0f
+        @JvmField
+		var currentLength = 0f
+        fun update(delta: Float) {
+            if (currentLength < length) {
+                currentLength = Math.min(currentLength + delta * growthRate, length)
+            }
+        }
 
-	private static final long serialVersionUID = 2314292760446370751L;
-	public transient int id = Simulation.RANDOM.nextInt();
-	
-	private final ProtozoaGenome genome;
+        companion object {
+            private const val serialVersionUID = 1L
+        }
+    }
 
-	private ProtozoaGenome crossOverGenome;
-	private Protozoan mate;
-	private float timeMating = 0;
+    class ContactSensor : Serializable {
+        var angle = 0f
+        var contact: Collidable? = null
+        fun reset() {
+            contact = null
+        }
 
-	private Retina retina;
-	private final Brain brain;
+        fun inContact(): Boolean {
+            return contact != null
+        }
 
-	private float shieldFactor = 1.3f;
-	private final float attackFactor = 10f;
-	private float deathRate = 0;
-	private final float herbivoreFactor;
-	private final float splitRadius;
+        companion object {
+            private const val serialVersionUID = 1L
+        }
+    }
 
-	private final Vector2 dir = new Vector2(0, 0);
+    @JvmField
+	val contactSensors: Array<ContactSensor?>
+    @JvmField
+	val spikes: Array<Spike>
+    @JvmField
+	var wasJustDamaged = false
+    private var cosHalfFov = 0f
 
-	public static class Spike implements Serializable {
-		private static final long serialVersionUID = 1L;
-		public float length;
-		public float angle;
-		public float growthRate;
-		public float currentLength = 0;
+    constructor(tank: Tank?) : this(ProtozoaGenome(), tank)
 
-		public void update(float delta) {
-			if (currentLength < length) {
-				currentLength = Math.min(currentLength + delta * growthRate, length);
-			}
-		}
-	}
+    fun getSensorPosition(sensor: ContactSensor?): Vector2 {
+        return pos!!.add(dir.rotate(sensor!!.angle).setLength(1.01f * radius))
+    }
 
-	public static class ContactSensor implements Serializable {
-		private static final long serialVersionUID = 1L;
-		public float angle;
-		public Collidable contact;
+    override fun handlePotentialCollision(other: Collidable, delta: Float): Boolean {
+        if (other !== this) {
+            for (contactSensor in contactSensors) {
+                if (other.pointInside(getSensorPosition(contactSensor))) {
+                    contactSensor!!.contact = other
+                }
+            }
+        }
+        return super.handlePotentialCollision(other, delta)
+    }
 
-		public void reset() {
-			contact = null;
-		}
+    fun cullFromRayCasting(o: Collidable?): Boolean {
+        if (o is Particle) {
+            val p = o
+            val dx = p.pos!!.x - pos!!.x
+            val dy = p.pos!!.y - pos!!.y
+            val d2 = dx * dx + dy * dy
+            val dirX = dir.x
+            val dirY = dir.y
+            val dirLength2 = dir.len2()
+            return (dx * dirX + dy * dirY) / Math.sqrt((d2 * dirLength2).toDouble()) < cosHalfFov
+        }
+        return false
+    }
 
-		public boolean inContact() {
-			return contact != null;
-		}
-	}
+    private val rayEndTmp = Vector2(0f, 0f)
+    private val rayStartTmp = Vector2(0f, 0f)
+    private val collisions = arrayOf(
+        Collision(), Collision()
+    )
 
-	private final ContactSensor[] contactSensors;
-	private final Spike[] spikes;
-	public boolean wasJustDamaged = false;
-	private float cosHalfFov;
+    init {
+        brain = genome.brain()
+        retina = genome.retina()
+        spikes = genome.spikes
+        herbivoreFactor = genome.herbivoreFactor
+        radius = (genome.radius)
+        healthyColour = genome.colour
+        growthRate = genome.growthRate
+        splitRadius = genome.splitRadius
+        pos = Vector2(0f, 0f)
+        val t = (2 * Math.PI * Simulation.RANDOM.nextDouble()).toFloat()
+        dir[(0.1f * Math.cos(t.toDouble())).toFloat()] = (0.1f * Math.sin(t.toDouble())).toFloat()
+        contactSensors = arrayOfNulls(Settings.numContactSensors)
+        for (i in 0 until Settings.numContactSensors) {
+            contactSensors[i] = ContactSensor()
+            contactSensors[i]!!.angle = (2 * Math.PI * i / Settings.numContactSensors).toFloat()
+        }
+        setDigestionRate(Food.Type.Meat, 1 / herbivoreFactor)
+        setDigestionRate(Food.Type.Plant, herbivoreFactor)
+        setComplexMoleculeProductionRate(
+            Food.ComplexMolecule.Retinal,
+            genome.getGeneValue(RetinalProductionGene::class.java)
+        )
+        if (retina.numberOfCells() > 0) addConstructionProject(retina.constructionProject)
+        val camProduction = genome.getGeneValue(
+            CAMProductionGene::class.java
+        )
+        if (camProduction != null) for (cam in camProduction.keys) setCAMProductionRate(cam, camProduction[cam]!!)
+    }
 
-	public Protozoan(ProtozoaGenome genome, Tank tank) throws MiscarriageException
-	{
-		super(tank);
+    fun see(o: Collidable) {
+        if (cullFromRayCasting(o)) return
+        rayStartTmp.set(pos!!)
+        val interactRange = interactRange
+        val dirAngle = dir.angle()
+        for (cell in retina.cells) {
+            val rays = cell.rays
+            for (i in rays.indices) {
+                rayEndTmp.set(rays[i])
+                    .turn(dirAngle)
+                    .setLength(interactRange)
+                    .translate(rayStartTmp)
+                o.rayCollisions(rayStartTmp, rayEndTmp, collisions)
+                var sqLen = Float.MAX_VALUE
+                for (collision in collisions) if (collision.collided) sqLen =
+                    Math.min(sqLen, collision.point.squareDistanceTo(rayStartTmp))
+                if (sqLen < cell.collisionSqLen(i)) cell[i, o.color] = sqLen
+            }
+        }
+    }
 
-		this.genome = genome;
-		brain = genome.brain();
-		retina = genome.retina();
-		spikes = genome.getSpikes();
-		herbivoreFactor = genome.getHerbivoreFactor();
+    fun eat(e: EdibleCell?, delta: Float) {
+        var extraction = 1f
+        if (e is PlantCell) {
+            if (spikes.size > 0) extraction *= Math.pow(
+                Settings.spikePlantConsumptionPenalty.toDouble(),
+                spikes.size.toDouble()
+            ).toFloat()
+            extraction *= herbivoreFactor
+        } else if (e is MeatCell) {
+            extraction /= herbivoreFactor
+        }
+        extractFood(e, extraction * delta)
+    }
 
-		setRadius(genome.getRadius());
-		setHealthyColour(genome.getColour());
-		setGrowthRate(genome.getGrowthRate());
-		splitRadius = genome.getSplitRadius();
+    fun damage(damage: Float) {
+        wasJustDamaged = true
+        health = health - damage
+    }
 
-		pos = new Vector2(0, 0);
-		float t = (float) (2 * Math.PI * Simulation.RANDOM.nextDouble());
-		dir.set(
-			(float) (0.1f * Math.cos(t)),
-			(float) (0.1f * Math.sin(t))
-		);
+    fun attack(p: Protozoan, spike: Spike, delta: Float) {
+        val myAttack =
+            (2 * health + Settings.spikeDamage * getSpikeLength(spike) + 2 * Simulation.RANDOM.nextDouble()).toFloat()
+        val theirDefense: Float = (2 * p.health + 0.3 * p.radius + 2 * Simulation.RANDOM.nextDouble()).toFloat()
+        if (myAttack > p.shieldFactor * theirDefense) p.damage(delta * attackFactor * (myAttack - p.shieldFactor * theirDefense))
+    }
 
-		contactSensors = new ContactSensor[Settings.numContactSensors];
-		for (int i = 0; i < Settings.numContactSensors; i++) {
-			contactSensors[i] = new ContactSensor();
-			contactSensors[i].angle = (float) (2 * Math.PI * i / Settings.numContactSensors);
-		}
+    fun think(delta: Float) {
+        brain.tick(this)
+        dir.turn(delta * 80 * brain.turn(this))
+        val spikeDecay = Math.pow(Settings.spikeMovementPenaltyFactor.toDouble(), spikes.size.toDouble()).toFloat()
+        val sizePenalty: Float = radius / splitRadius // smaller flagella generate less impulse
+        val speed = Math.abs(brain.speed(this))
+        val vel = dir.mul(sizePenalty * spikeDecay * speed)
+        val work = .5f * mass * vel.len2()
+        if (enoughEnergyAvailable(work)) {
+            useEnergy(work)
+            pos!!.translate(vel.scale(delta))
+        }
+    }
 
-		setDigestionRate(Food.Type.Meat, 1 / herbivoreFactor);
-		setDigestionRate(Food.Type.Plant, herbivoreFactor);
+    private fun shouldSplit(): Boolean {
+        return radius > splitRadius && health > Settings.minHealthToSplit
+    }
 
-		setComplexMoleculeProductionRate(
-				Food.ComplexMolecule.Retinal,
-				genome.getGeneValue(RetinalProductionGene.class));
+    @Throws(MiscarriageException::class)
+    private fun createSplitChild(r: Float): Protozoan {
+        val stuntingFactor: Float = r / radius
+        val child = genome.createChild(tank, crossOverGenome)
+        child.radius = (stuntingFactor * child.radius)
+        return child
+    }
 
-		if (retina.numberOfCells() > 0)
-			addConstructionProject(retina.getConstructionProject());
+    fun interact(other: Collidable, delta: Float) {
+        if (other === this) return
+        if (isDead) {
+            handleDeath()
+            return
+        }
+        if (retina.numberOfCells() > 0 && retina.health > 0) see(other)
+        if (other is Cell) {
+            interact(other, delta)
+        }
+    }
 
-		Map<CellAdhesion.CellAdhesionMolecule, Float> camProduction = genome.getGeneValue(CAMProductionGene.class);
-		if (camProduction != null)
-			for (CellAdhesion.CellAdhesionMolecule cam : camProduction.keySet())
-				setCAMProductionRate(cam, camProduction.get(cam));
+    fun interact(other: Cell, delta: Float) {
+        val d = other.pos!!.distanceTo(pos!!)
+        if (d - other.radius > interactRange) return
+        if (shouldSplit()) {
+            super.burst(Protozoan::class.java) { r: Float -> createSplitChild(r) }
+            return
+        }
+        val r: Float = radius + other.radius
+        if (other is Protozoan) {
+            val p = other
+            for (spike in spikes) {
+                val spikeLen = getSpikeLength(spike)
+                if (d < r + spikeLen && spikeInContact(spike, spikeLen, p)) attack(p, spike, delta)
+            }
+        }
+        if (0.95 * d < r) {
+            if (other is Protozoan) {
+                val p = other
+                if (brain.wantToMateWith(p) && p.brain.wantToMateWith(this)) {
+                    if (p !== mate) {
+                        timeMating = 0f
+                        mate = p
+                    } else {
+                        timeMating += delta
+                        if (timeMating >= Settings.matingTime) crossOverGenome = p.genome
+                    }
+                }
+            } else if (other.isEdible) eat(other as EdibleCell, delta)
+        }
+    }
 
-	}
+    private fun spikeInContact(spike: Spike, spikeLen: Float, other: Cell): Boolean {
+        val spikeStartPos = dir.unit().rotate(spike.angle).setLength(radius).translate(pos!!)
+        val spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos!!).setLength(spikeLen))
+        return other.pos!!.sub(spikeEndPos).len2() < other.radius * other.radius
+    }
 
-	public Protozoan(Tank tank) throws MiscarriageException {
-		this(new ProtozoaGenome(), tank);
-	}
+    val interactRange: Float
+        get() = if (retina.numberOfCells() > 0 && retina.health > 0) Settings.protozoaInteractRange else radius + 0.005f
 
-	public Vector2 getSensorPosition(ContactSensor sensor) {
-		return pos.add(dir.rotate(sensor.angle).setLength(1.01f * getRadius()));
-	}
+    override fun handleInteractions(delta: Float) {
+        super.handleInteractions(delta)
+        wasJustDamaged = false
+        retina.reset()
+        val chunkManager = tank.chunkManager
+        val entities = chunkManager
+            .broadCollisionDetection(pos, interactRange)
+        entities.forEachRemaining { e: Collidable -> interact(e, delta) }
+    }
 
-	@Override
-	public boolean handlePotentialCollision(Collidable other, float delta) {
-		if (other != this) {
-			for (ContactSensor contactSensor : contactSensors) {
-				if (other.pointInside(getSensorPosition(contactSensor))) {
-					contactSensor.contact = other;
-				}
-			}
-		}
-		return super.handlePotentialCollision(other, delta);
-	}
+    private fun breakIntoPellets() {
+        burst(MeatCell::class.java) { r: Float? -> MeatCell(r!!, tank) }
+    }
 
-	public boolean cullFromRayCasting(Collidable o) {
-		if (o instanceof Particle) {
-			Particle p = (Particle) o;
-			float dx = p.pos.x - pos.x;
-			float dy = p.pos.y - pos.y;
-			float d2 = dx * dx + dy * dy;
-			float dirX = getDir().x;
-			float dirY = getDir().y;
-			float dirLength2 = getDir().len2();
-			return (dx * dirX + dy * dirY) / Math.sqrt(d2 * dirLength2) < cosHalfFov;
-		}
-		return false;
-	}
+    override fun handleDeath() {
+        if (!hasHandledDeath) {
+            super.handleDeath()
+            breakIntoPellets()
+        }
+    }
 
-	private final Vector2 rayEndTmp = new Vector2(0, 0), rayStartTmp = new Vector2(0, 0);
-	private final Collidable.Collision[] collisions = new Collidable.Collision[]{
-			new Collidable.Collision(), new Collidable.Collision()
-	};
-	public void see(Collidable o)
-	{
-		if (cullFromRayCasting(o))
-			return;
+    override fun getPrettyName(): String {
+        return "Protozoan"
+    }
 
-		rayStartTmp.set(pos);
-		float interactRange = getInteractRange();
-		float dirAngle = getDir().angle();
-		for (Retina.Cell cell : retina.getCells()) {
-			Vector2[] rays = cell.getRays();
-			for (int i = 0; i < rays.length; i++) {
-				rayEndTmp.set(rays[i])
-						.turn(dirAngle)
-						.setLength(interactRange)
-						.translate(rayStartTmp);
-				o.rayCollisions(rayStartTmp, rayEndTmp, collisions);
+    override fun getStats(): Map<String, Float> {
+        val stats = super.getStats()
+        stats["Death Rate"] = 100 * deathRate
+        stats["Split Radius"] = Settings.statsDistanceScalar * splitRadius
+        stats["Max Turning"] = genome.maxTurn
+        stats["Mutations"] = genome.numMutations.toFloat()
+        stats["Genetic Size"] = Settings.statsDistanceScalar * genome.radius
+        stats["Has Mated"] = if (crossOverGenome == null) 0f else 1f
+        if (spikes.size > 0) stats["Num Spikes"] = spikes.size.toFloat()
+        if (brain is NNBrain) {
+            val nn = brain.network
+            stats["Network Depth"] = nn.depth.toFloat()
+            stats["Network Size"] = nn.size.toFloat()
+        }
+        if (retina.numberOfCells() > 0) {
+            stats["Retina Cells"] = retina.numberOfCells().toFloat()
+            stats["Retina FoV"] = Math.toDegrees(retina.fov.toDouble()).toFloat()
+            stats["Retina Health"] = retina.health
+        }
+        stats["Herbivore Factor"] = herbivoreFactor
+        return stats
+    }
 
-				float sqLen = Float.MAX_VALUE;
-				for (Collidable.Collision collision : collisions)
-					if (collision.collided)
-						sqLen = Math.min(sqLen, collision.point.squareDistanceTo(rayStartTmp));
-
-				if (sqLen < cell.collisionSqLen(i))
-					cell.set(i, o.getColor(), sqLen);
-			}
-		}
-	}
-	
-	public void eat(EdibleCell e, float delta)
-	{
-		float extraction = 1f;
-		if (e instanceof PlantCell) {
-			if (spikes.length > 0)
-				extraction *= Math.pow(Settings.spikePlantConsumptionPenalty, spikes.length);
-			extraction *= herbivoreFactor;
-		} else if (e instanceof MeatCell) {
-			extraction /= herbivoreFactor;
-		}
-		extractFood(e, extraction * delta);
-	}
-
-	public void damage(float damage) {
-		wasJustDamaged = true;
-		setHealth(getHealth() - damage);
-	}
-	
-	public void attack(Protozoan p, Spike spike, float delta)
-	{
-		float myAttack = (float) (
-				2*getHealth() +
-				Settings.spikeDamage * getSpikeLength(spike) +
-				2*Simulation.RANDOM.nextDouble()
-		);
-		float theirDefense = (float) (
-				2*p.getHealth() +
-				0.3*p.getRadius() +
-				2*Simulation.RANDOM.nextDouble()
-		);
-
-		if (myAttack > p.shieldFactor * theirDefense)
-			p.damage(delta * attackFactor * (myAttack - p.shieldFactor * theirDefense));
-
-	}
-	
-	public void think(float delta)
-	{
-		brain.tick(this);
-		dir.turn(delta * 80 * brain.turn(this));
-		float spikeDecay = (float) Math.pow(Settings.spikeMovementPenaltyFactor, spikes.length);
-		float sizePenalty = getRadius() / splitRadius; // smaller flagella generate less impulse
-		float speed = Math.abs(brain.speed(this));
-		Vector2 vel = dir.mul(sizePenalty * spikeDecay * speed);
-		float work = .5f * getMass() * vel.len2();
-		if (enoughEnergyAvailable(work)) {
-			useEnergy(work);
-			pos.translate(vel.scale(delta));
-		}
-	}
-
-	private boolean shouldSplit() {
-		return getRadius() > splitRadius && getHealth() > Settings.minHealthToSplit;
-	}
-
-	private Protozoan createSplitChild(float r) throws MiscarriageException {
-		float stuntingFactor = r / getRadius();
-		Protozoan child = genome.createChild(tank, crossOverGenome);
-		child.setRadius(stuntingFactor * child.getRadius());
-		return child;
-	}
-
-	public void interact(Collidable other, float delta) {
-		if (other == this)
-			return;
-
-		if (isDead()) {
-			handleDeath();
-			return;
-		}
-
-		if (retina.numberOfCells() > 0 && retina.getHealth() > 0)
-			see(other);
-
-		if (other instanceof Cell) {
-			interact((Cell) other, delta);
-		}
-	}
-
-	public void interact(Cell other, float delta) {
-
-		float d = other.pos.distanceTo(pos);
-		if (d - other.getRadius() > getInteractRange())
-			return;
-
-		if (shouldSplit()) {
-			super.burst(Protozoan.class, this::createSplitChild);
-			return;
-		}
-
-		float r = getRadius() + other.getRadius();
-
-		if (other instanceof Protozoan) {
-			Protozoan p = (Protozoan) other;
-			for (Spike spike : spikes) {
-				float spikeLen = getSpikeLength(spike);
-				if (d < r + spikeLen && spikeInContact(spike, spikeLen, p))
-					attack(p, spike, delta);
-			}
-		}
-
-		if (0.95 * d < r) {
-
-			if (other instanceof Protozoan)
-			{
-				Protozoan p = (Protozoan) other;
-
-				if (brain.wantToMateWith(p) && p.brain.wantToMateWith(this)) {
-					if (p != mate) {
-						timeMating = 0;
-						mate = p;
-					} else {
-						timeMating += delta;
-						if (timeMating >= Settings.matingTime)
-							crossOverGenome = p.getGenome();
-					}
-				}
-			}
-			else if (other.isEdible())
-				eat((EdibleCell) other, delta);
-
-		}
-	}
-
-	private boolean spikeInContact(Spike spike, float spikeLen, Cell other) {
-		Vector2 spikeStartPos = getDir().unit().rotate(spike.angle).setLength(getRadius()).translate(pos);
-		Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen));
-		return other.pos.sub(spikeEndPos).len2() < other.getRadius() * other.getRadius();
-	}
-
-	public float getInteractRange() {
-		return retina.numberOfCells() > 0 && retina.getHealth() > 0 ?
-				Settings.protozoaInteractRange : getRadius() + 0.005f;
-	}
-
-	@Override
-	public void handleInteractions(float delta) {
-		super.handleInteractions(delta);
-		wasJustDamaged = false;
-		retina.reset();
-		ChunkManager chunkManager = tank.getChunkManager();
-		Iterator<Collidable> entities = chunkManager
-				.broadCollisionDetection(pos, getInteractRange());
-		entities.forEachRemaining(e -> interact(e, delta));
-	}
-
-	private void breakIntoPellets() {
-		burst(MeatCell.class, r -> new MeatCell(r, tank));
-	}
-
-	public void handleDeath() {
-		if (!hasHandledDeath) {
-			super.handleDeath();
-			breakIntoPellets();
-		}
-	}
-
-	@Override
-	public String getPrettyName() {
-		return "Protozoan";
-	}
-
-	@Override
-	public Map<String, Float> getStats() {
-		Map<String, Float> stats = super.getStats();
-		stats.put("Death Rate", 100 * deathRate);
-		stats.put("Split Radius", Settings.statsDistanceScalar * splitRadius);
-		stats.put("Max Turning", genome.getMaxTurn());
-		stats.put("Mutations", (float) genome.getNumMutations());
-		stats.put("Genetic Size", Settings.statsDistanceScalar * genome.getRadius());
-		stats.put("Has Mated", crossOverGenome == null ? 0f : 1f);
-		if (spikes.length > 0)
-			stats.put("Num Spikes", (float) spikes.length);
-		if (brain instanceof NNBrain) {
-			NeuralNetwork nn = ((NNBrain) brain).network;
-			stats.put("Network Depth", (float) nn.getDepth());
-			stats.put("Network Size", (float) nn.getSize());
-		}
-		if (retina.numberOfCells() > 0) {
-			stats.put("Retina Cells", (float) retina.numberOfCells());
-			stats.put("Retina FoV", (float) Math.toDegrees(retina.getFov()));
-			stats.put("Retina Health", retina.getHealth());
-		}
-		stats.put("Herbivore Factor", herbivoreFactor);
-		return stats;
-	}
-
-	@Override
-	public float getGrowthRate() {
-		float growthRate = super.getGrowthRate();
-		if (getRadius() > splitRadius)
-			growthRate *= getHealth() * splitRadius / (5 * getRadius());
-//		for (Spike spike : spikes)
+    override fun getGrowthRate(): Float {
+        var growthRate = super.getGrowthRate()
+        if (radius > splitRadius) growthRate *= health * splitRadius / (5 * radius)
+        //		for (Spike spike : spikes)
 //			growthRate -= Settings.spikeGrowthPenalty * spike.growthRate;
 //		growthRate -= Settings.retinaCellGrowthCost * retina.numberOfCells();
-		return growthRate;
-	}
+        return growthRate
+    }
 
-	public void age(float delta) {
-		deathRate = getRadius() * delta * Settings.protozoaStarvationFactor;
-//		deathRate *= 0.75f + 0.25f * getSpeed();
-		deathRate *= (float) Math.pow(Settings.spikeDeathRatePenalty, spikes.length);
-		setHealth(getHealth() - deathRate);
-	}
+    fun age(delta: Float) {
+        deathRate = radius * delta * Settings.protozoaStarvationFactor
+        //		deathRate *= 0.75f + 0.25f * getSpeed();
+        deathRate *= Math.pow(Settings.spikeDeathRatePenalty.toDouble(), spikes.size.toDouble()).toFloat()
+        health = health - deathRate
+    }
 
-	@Override
-	public void update(float delta)
-	{
-		super.update(delta);
+    override fun update(delta: Float) {
+        super.update(delta)
+        age(delta)
+        if (isDead) handleDeath()
+        think(delta)
+        for (spike in spikes) spike.update(delta)
+        for (contactSensor in contactSensors) contactSensor!!.reset()
+        maintainRetina(delta)
+    }
 
-		age(delta);
-		if (isDead())
-			handleDeath();
+    private fun maintainRetina(delta: Float) {
+        val availableRetinal = getComplexMoleculeAvailable(Food.ComplexMolecule.Retinal)
+        val usedRetinal = retina.updateHealth(delta, availableRetinal)
+        depleteComplexMolecule(Food.ComplexMolecule.Retinal, usedRetinal)
+    }
 
-		think(delta);
+    override fun isEdible(): Boolean {
+        return false
+    }
 
-		for (Spike spike : spikes)
-			spike.update(delta);
+    fun getRetina(): Retina {
+        return retina
+    }
 
-		for (ContactSensor contactSensor : contactSensors)
-			contactSensor.reset();
+    fun setRetina(retina: Retina) {
+        this.retina = retina
+        cosHalfFov = Math.cos((retina.fov / 2f).toDouble()).toFloat()
+    }
 
-		maintainRetina(delta);
-	}
+    fun getSpikeLength(spike: Spike): Float {
+        return brain.attack(this) * spike.currentLength * radius / splitRadius
+    }
 
-	private void maintainRetina(float delta) {
-		float availableRetinal = getComplexMoleculeAvailable(Food.ComplexMolecule.Retinal);
-		float usedRetinal = retina.updateHealth(delta, availableRetinal);
-		depleteComplexMolecule(Food.ComplexMolecule.Retinal, usedRetinal);
-	}
+    val isHarbouringCrossover: Boolean
+        get() = crossOverGenome != null
 
-	@Override
-	public boolean isEdible() {
-		return false;
-	}
-
-	public Retina getRetina() {
-		return retina;
-	}
-
-	public void setRetina(Retina retina) {
-		this.retina = retina;
-		this.cosHalfFov = (float) Math.cos(retina.getFov() / 2f);
-	}
-
-	public ProtozoaGenome getGenome() {
-		return genome;
-	}
-
-	public float getShieldFactor() {
-		return shieldFactor;
-	}
-
-	public void setShieldFactor(float shieldFactor) {
-		this.shieldFactor = shieldFactor;
-	}
-
-	public Brain getBrain() {
-		return brain;
-	}
-
-	public Spike[] getSpikes() {
-		return spikes;
-	}
-
-	public float getSpikeLength(Spike spike) {
-		return brain.attack(this) * spike.currentLength * getRadius() / splitRadius;
-	}
-
-	public Vector2 getDir() {
-		return dir;
-	}
-
-	public ContactSensor[] getContactSensors() {
-		return contactSensors;
-	}
-
-	public boolean isHarbouringCrossover() {
-		return crossOverGenome != null;
-	}
-
-	public Protozoan getMate() {
-		return mate;
-	}
-
+    companion object {
+        private const val serialVersionUID = 2314292760446370751L
+    }
 }

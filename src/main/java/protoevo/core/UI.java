@@ -150,8 +150,8 @@ public class UI implements ChangeListener {
 
 			renderStats(g, lineNumber++, tracked.getStats());
 
-			if (tracked instanceof Protozoan && ((Protozoan) tracked).getBrain() instanceof NNBrain) {
-				NNBrain brain = (NNBrain) ((Protozoan) tracked).getBrain();
+			if (tracked instanceof Protozoan && ((Protozoan) tracked).brain instanceof NNBrain) {
+				NNBrain brain = (NNBrain) ((Protozoan) tracked).brain;
 				renderBrainNetwork(brain.network, g);
 			}
 		}

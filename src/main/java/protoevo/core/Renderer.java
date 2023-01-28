@@ -81,7 +81,7 @@ public class Renderer extends Canvas
 
 		float dt 	= p.getRetina().getCellAngle();
 		float fov 	= p.getRetina().getFov();
-		float t0 	= -p.getDir().angle() - 0.5f*fov - rotate;
+		float t0 	= -p.dir.angle() - 0.5f*fov - rotate;
 		float t 	= t0;
 		
 		g.setColor(c.darker());
@@ -134,7 +134,7 @@ public class Renderer extends Canvas
 
 		if (p == track && simulation.inDebugMode()) {
 			g.setColor(Color.YELLOW.darker());
-			float dirAngle = p.getDir().angle();
+			float dirAngle = p.dir.angle();
 			for (Retina.Cell cell : p.getRetina().getCells()) {
 				for (Vector2 ray : cell.getRays()) {
 					Vector2 rayRotated = ray.rotate(dirAngle);
@@ -162,12 +162,12 @@ public class Renderer extends Canvas
 			drawOutlinedCircle(g, pos, r, p.getColor(), Color.RED);
 		}
 
-		for (Protozoan.Spike spike : p.getSpikes()) {
+		for (Protozoan.Spike spike : p.spikes) {
 			if (r > 0.001 * window.getHeight()) {
 				Stroke s = g.getStroke();
 				g.setColor(p.getColor().darker().darker());
 				g.setStroke(new BasicStroke((int) (r * 0.2)));
-				Vector2 spikeStartPos = p.getDir().unit().rotate(spike.angle).setLength(r).translate(pos);
+				Vector2 spikeStartPos = p.dir.unit().rotate(spike.angle).setLength(r).translate(pos);
 				float spikeLen = toRenderSpace(p.getSpikeLength(spike));
 				Vector2 spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos).setLength(spikeLen));
 				g.drawLine((int) (spikeStartPos.x), (int) (spikeStartPos.y),
@@ -393,7 +393,7 @@ public class Renderer extends Canvas
 					drawCollisionBounds(g, cell, 1.1f * cell.getRadius(), Color.WHITE.darker());
 				}
 
-				for (Protozoan.ContactSensor sensor : p.getContactSensors()) {
+				for (Protozoan.ContactSensor sensor : p.contactSensors) {
 					Vector2 sensorPos = p.getSensorPosition(sensor);
 					fillCircle(g, toRenderSpace(sensorPos), 2, Color.WHITE.darker());
 				}

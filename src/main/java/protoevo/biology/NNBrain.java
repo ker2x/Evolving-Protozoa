@@ -31,10 +31,10 @@ public class NNBrain implements Brain {
         // ProtozoaGenome.nonVisualSensorSize
         inputs[i++] = 1; // bias term
         inputs[i++] = p.getHealth() * 2 - 1;
-        inputs[i++] = 2 * p.getRadius() / p.getGenome().getSplitRadius() - 1;
+        inputs[i++] = 2 * p.getRadius() / p.genome.getSplitRadius() - 1;
         inputs[i++] = 2 * p.getConstructionMassAvailable() / p.getConstructionMassCap() - 1;
 
-        for (Protozoan.ContactSensor sensor : p.getContactSensors())
+        for (Protozoan.ContactSensor sensor : p.contactSensors)
             inputs[i++] = sensor.inContact() ? 1f : 0f;
 
         if (Settings.enableChemicalField) {
