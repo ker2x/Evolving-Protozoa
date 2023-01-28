@@ -1,25 +1,23 @@
 package protoevo.utils
 
 import java.io.Serializable
+import kotlin.math.sqrt
 
 class Vector2(x: Float, y: Float) : Serializable {
+
     @JvmField
-    var x = 0f
+    var x : Float = 0f
     @JvmField
-    var y = 0f
+    var y : Float = 0f
 
     init {
         this.x = x
         this.y = y
     }
 
-    fun len2(): Float {
-        return x * x + y * y
-    }
+    fun len2() :Float = x * x + y * y
+    fun len() :Float = sqrt(x * x + y * y)
 
-    fun len(): Float {
-        return Math.sqrt((x * x + y * y).toDouble()).toFloat()
-    }
 
     fun copy(): Vector2 {
         return Vector2(x, y)
@@ -43,25 +41,12 @@ class Vector2(x: Float, y: Float) : Serializable {
         return this
     }
 
-    fun add(b: Vector2): Vector2 {
-        return Vector2(x + b.x, y + b.y)
-    }
+    fun add(b: Vector2): Vector2 = Vector2(x + b.x, y + b.y)
+    fun sub(b: Vector2): Vector2 = Vector2(x - b.x, y - b.y)
+    fun mul(s: Float): Vector2 = Vector2(x * s, y * s)
+    fun dot(b: Vector2?): Float = x * b!!.x + y * b.y
+    fun perp(): Vector2 = Vector2(-y, x)
 
-    fun sub(b: Vector2): Vector2 {
-        return Vector2(x - b.x, y - b.y)
-    }
-
-    fun mul(s: Float): Vector2 {
-        return Vector2(s * x, s * y)
-    }
-
-    fun dot(b: Vector2?): Float {
-        return x * b!!.x + y * b.y
-    }
-
-    fun perp(): Vector2 {
-        return Vector2(-y, x)
-    }
 
     fun rotate(angle: Float): Vector2 {
         val c = CachedMath.cos(angle)
@@ -73,9 +58,9 @@ class Vector2(x: Float, y: Float) : Serializable {
         val c = CachedMath.cos(angle)
         val s = CachedMath.sin(angle)
         val xNew = x * c - y * s
-        val yNew = x * s + y * c
+        y = x * s + y * c
         x = xNew
-        y = yNew
+        //y = yNew
         return this
     }
 
