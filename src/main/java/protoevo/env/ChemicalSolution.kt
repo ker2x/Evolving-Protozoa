@@ -2,7 +2,6 @@ package protoevo.env
 
 import protoevo.biology.Cell
 import protoevo.biology.PlantCell
-import protoevo.core.Particle
 import protoevo.core.Settings
 import protoevo.utils.Vector2
 import java.io.Serializable

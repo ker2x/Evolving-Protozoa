@@ -1,7 +1,6 @@
 package protoevo.core
 
 import protoevo.utils.REPL
-import protoevo.utils.TextStyle
 import protoevo.utils.Window
 import javax.swing.SwingUtilities
 

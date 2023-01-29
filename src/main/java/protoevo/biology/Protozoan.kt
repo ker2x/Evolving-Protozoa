@@ -181,7 +181,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 
     private fun damage(damage: Float) {
         wasJustDamaged = true
-        _health = _health - damage
+        _health -= damage
     }
 
     private fun attack(p: Protozoan, spike: Spike, delta: Float) {
