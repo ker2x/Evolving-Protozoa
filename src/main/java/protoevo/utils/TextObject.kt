@@ -7,8 +7,8 @@ class TextObject(var text: String?, private var m_font: String?, var size: Int, 
     var style: Int
     var color: Color?
 
-    constructor(text: String?, size: Int) : this(text, TextStyle.Companion.fontName, size, Vector2(0f, 0f))
-    constructor(text: String?, size: Int, position: Vector2) : this(text, TextStyle.Companion.fontName, size, position)
+    constructor(text: String?, size: Int) : this(text, TextStyle.fontName, size, Vector2(0f, 0f))
+    constructor(text: String?, size: Int, position: Vector2) : this(text, TextStyle.fontName, size, position)
 
     init {
         style = Font.PLAIN

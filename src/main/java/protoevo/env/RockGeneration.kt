@@ -135,7 +135,7 @@ object RockGeneration {
         excluding: Rock?
     ): Boolean {
         for (rock in rocks!!) for (rockEdge in rock!!.edges) if (rock != excluding &&
-            (Rock.Companion.edgesIntersect(rockEdge, e1) || Rock.Companion.edgesIntersect(rockEdge, e2))
+            (Rock.edgesIntersect(rockEdge, e1) || Rock.edgesIntersect(rockEdge, e2))
         ) return false
         return true
     }
