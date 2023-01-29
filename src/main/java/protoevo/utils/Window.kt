@@ -75,7 +75,7 @@ class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, Actio
     val dimensions: Vector2
         get() = Vector2(width.toFloat(), height.toFloat())
     val currentMousePosition: Vector2
-        get() = controller.currentMousePosition
+        get() = currentMousePosition
 
     companion object {
         private const val serialVersionUID = -2111860594941368902L

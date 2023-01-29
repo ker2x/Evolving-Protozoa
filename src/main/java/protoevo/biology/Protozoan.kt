@@ -1,6 +1,5 @@
 package protoevo.biology
 
-import protoevo.biology.Protozoan
 import protoevo.biology.genes.CAMProductionGene
 import protoevo.biology.genes.ProtozoaGenome
 import protoevo.biology.genes.RetinalProductionGene
@@ -10,10 +9,12 @@ import protoevo.core.Settings
 import protoevo.core.Simulation
 import protoevo.env.Tank
 import protoevo.utils.Vector2
+import java.awt.Color
 import java.io.Serializable
 import kotlin.math.pow
 
-class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) {
+class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
+) : Cell(tank) {
     @JvmField
 	@Transient
     var id = Simulation.RANDOM.nextInt()
@@ -82,10 +83,10 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         return pos!!.add(dir.rotate(sensor!!.angle).setLength(1.01f * radius))
     }
 
-    override fun handlePotentialCollision(other: Collidable, delta: Float): Boolean {
+    override fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean {
         if (other !== this) {
             for (contactSensor in contactSensors) {
-                if (other.pointInside(getSensorPosition(contactSensor))) {
+                if (other!!.pointInside(getSensorPosition(contactSensor))) {
                     contactSensor!!.contact = other
                 }
             }
@@ -158,7 +159,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
                 var sqLen = Float.MAX_VALUE
                 for (collision in collisions) if (collision.collided) sqLen =
                     Math.min(sqLen, collision.point.squareDistanceTo(rayStartTmp))
-                if (sqLen < cell.collisionSqLen(i)) cell[i, o.color] = sqLen
+                if (sqLen < cell.collisionSqLen(i)) cell[i, o.getColor()] = sqLen
             }
         }
     }
@@ -273,8 +274,12 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?) : Cell(tank) 
         retina.reset()
         val chunkManager = tank.chunkManager
         val entities = chunkManager
-            .broadCollisionDetection(pos, interactRange)
-        entities.forEachRemaining { e: Collidable -> interact(e, delta) }
+            .broadCollisionDetection(pos!!, interactRange)
+        entities.forEachRemaining { e: Collidable? ->
+            if (e != null) {
+                interact(e, delta)
+            }
+        }
     }
 
     private fun breakIntoPellets() {

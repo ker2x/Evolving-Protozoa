@@ -1,205 +1,138 @@
-package protoevo.core;
+package protoevo.core
 
-import protoevo.biology.Cell;
-import com.google.common.collect.Iterators;
-import protoevo.env.Rock;
-import protoevo.utils.Vector2;
+import com.google.common.collect.Iterators
+import protoevo.biology.Cell
+import protoevo.env.Rock
+import protoevo.utils.Vector2
+import java.io.Serializable
+import java.util.function.Consumer
+import java.util.function.Function
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.function.Function;
+class ChunkManager(
+    val xMin: Float, val xMax: Float,
+    val yMin: Float, val yMax: Float,
+    val chunkSize: Float
+) : Serializable {
+    val nYChunks: Int
+    val nXChunks: Int
+    val chunks: Array<Chunk?>
+    private val entities: MutableList<Cell> = ArrayList()
 
-public class ChunkManager implements Serializable {
-    public static final long serialVersionUID = 1L;
-
-    private final float chunkSize;
-    private final float xMin;
-    private final float yMin;
-    private final float xMax;
-    private final float yMax;
-    private final int nYChunks;
-    private final int nXChunks;
-
-    private final Chunk[] chunks;
-    private final List<Cell> entities = new ArrayList<>();
-
-    public ChunkManager(float xMin, float xMax,
-                        float yMin, float yMax,
-                        float chunkSize) {
-        this.xMin = xMin;
-        this.xMax = xMax;
-        this.yMin = yMin;
-        this.yMax = yMax;
-        this.chunkSize = chunkSize;
-
-        this.nXChunks = 2 + (int) ((xMax - xMin) / chunkSize);
-        this.nYChunks = 2 + (int) ((yMax - yMin) / chunkSize);
-
-        this.chunks = new Chunk[nXChunks * nYChunks];
-        for (int i = 0; i < nXChunks; i++)
-            for (int j = 0; j < nYChunks; j++)
-                this.chunks[toChunkID(i, j)] = new Chunk(i, j, this);
-
+    init {
+        nXChunks = 2 + ((xMax - xMin) / chunkSize).toInt()
+        nYChunks = 2 + ((yMax - yMin) / chunkSize).toInt()
+        chunks = arrayOfNulls(nXChunks * nYChunks)
+        for (i in 0 until nXChunks) for (j in 0 until nYChunks) chunks[toChunkID(i, j)] = Chunk(i, j, this)
     }
 
-    public <T extends Collidable> Iterator<T> broadScan(
-            Vector2 pos,
-            float range,
-            Function<Chunk, Iterator<T>> scanner
-    ) {
-        float x = pos.x;
-        float y = pos.y;
-
-        int iMin = this.toChunkX(x - range);
-        int iMax = this.toChunkX(x + range);
-        int jMin = this.toChunkY(y - range);
-        int jMax = this.toChunkY(y + range);
-
-        List<Iterator<T>> iterators = new ArrayList<>((iMax - iMin + 1) * (jMax - jMin + 1));
-        for (int i = iMin; i <= iMax; i++) {
-            for (int j = jMin; j <= jMax; j++) {
-                Chunk chunk = getChunk(toChunkID(i, j));
-                iterators.add(scanner.apply(chunk));
+    fun <T : Collidable?> broadScan(
+        pos: Vector2,
+        range: Float,
+        scanner: Function<Chunk?, Iterator<T>?>
+    ): Iterator<T> {
+        val x = pos.x
+        val y = pos.y
+        val iMin = toChunkX(x - range)
+        val iMax = toChunkX(x + range)
+        val jMin = toChunkY(y - range)
+        val jMax = toChunkY(y + range)
+        val iterators: MutableList<Iterator<T>?> = ArrayList((iMax - iMin + 1) * (jMax - jMin + 1))
+        for (i in iMin..iMax) {
+            for (j in jMin..jMax) {
+                val chunk = getChunk(toChunkID(i, j))
+                iterators.add(scanner.apply(chunk))
             }
         }
-        return Iterators.concat(iterators.iterator());
+        return Iterators.concat(iterators.iterator())
     }
 
-    public Iterator<Collidable> broadCollisionDetection(Vector2 pos, float range) {
-        return broadScan(pos, range, Chunk::getCollidables);
+    fun broadCollisionDetection(pos: Vector2, range: Float): Iterator<Collidable?> {
+        return broadScan(pos, range) { obj: Chunk? -> obj!!.collidables }
     }
 
-    public Iterator<Cell> broadEntityDetection(Vector2 pos, float range) {
-        return broadScan(pos, range, chunk -> chunk.getCells().iterator());
+    fun broadEntityDetection(pos: Vector2, range: Float): Iterator<Cell?> {
+        return broadScan(pos, range) { chunk: Chunk? -> chunk!!.cells.iterator() }
     }
 
-    public int toChunkX(float tankX) {
-        int i = (int) (1 + (tankX - xMin) / chunkSize);
-        if (i < 0)
-            return 0;
-        if (i >= nXChunks)
-            return nXChunks - 1;
-        return i;
+    fun toChunkX(tankX: Float): Int {
+        val i = (1 + (tankX - xMin) / chunkSize).toInt()
+        if (i < 0) return 0
+        return if (i >= nXChunks) nXChunks - 1 else i
     }
 
-    public int toChunkY(float tankY) {
-        int j = (int) (1 + (tankY - yMin) / chunkSize);
-        if (j < 0)
-            return 0;
-        if (j >= nYChunks)
-            return nYChunks - 1;
-        return j;
+    fun toChunkY(tankY: Float): Int {
+        val j = (1 + (tankY - yMin) / chunkSize).toInt()
+        if (j < 0) return 0
+        return if (j >= nYChunks) nYChunks - 1 else j
     }
 
-    public int toChunkID(int i, int j) {
-        int id = i + j * nYChunks;
-        if (id < 0)
-            return 0;
-        if (id >= nXChunks * nYChunks)
-            return nXChunks * nYChunks - 1;
-        return id % (nXChunks * nYChunks);
+    fun toChunkID(i: Int, j: Int): Int {
+        val id = i + j * nYChunks
+        if (id < 0) return 0
+        return if (id >= nXChunks * nYChunks) nXChunks * nYChunks - 1 else id % (nXChunks * nYChunks)
     }
 
-    public int toChunkID(float x, float y) {
-
-        int i = (int) (1 + (x - xMin) / chunkSize);
-        int j = (int) (1 + (y - yMin) / chunkSize);
-
-        return toChunkID(i, j);
+    fun toChunkID(x: Float, y: Float): Int {
+        val i = (1 + (x - xMin) / chunkSize).toInt()
+        val j = (1 + (y - yMin) / chunkSize).toInt()
+        return toChunkID(i, j)
     }
 
-    public Vector2 toTankCoords(Vector2 chunkCoords) {
-        float x = (chunkCoords.x - 1) * chunkSize + xMin;
-        float y = (chunkCoords.y - 1) * chunkSize + yMin;
-        return new Vector2(x, y);
+    fun toTankCoords(chunkCoords: Vector2): Vector2 {
+        val x = (chunkCoords.x - 1) * chunkSize + xMin
+        val y = (chunkCoords.y - 1) * chunkSize + yMin
+        return Vector2(x, y)
     }
 
-    public Chunk getChunk(Cell e) {
-        return getChunk(e.pos);
+    fun getChunk(e: Cell): Chunk? {
+        return getChunk(e.pos)
     }
 
-    public Chunk getChunk(Vector2 pos) {
-        int chunkID = this.toChunkID(pos.x, pos.y);
-        return getChunk(chunkID);
+    fun getChunk(pos: Vector2?): Chunk? {
+        val chunkID = this.toChunkID(pos!!.x, pos.y)
+        return getChunk(chunkID)
     }
 
-    public Chunk getChunk(int chunkID) {
-        return this.chunks[chunkID];
+    fun getChunk(chunkID: Int): Chunk? {
+        return chunks[chunkID]
     }
 
-    public void allocateToChunk(Cell e) {
-        Chunk chunk = getChunk(e);
-        chunk.addEntity(e);
+    fun allocateToChunk(e: Cell) {
+        val chunk = getChunk(e)
+        chunk!!.addEntity(e)
     }
 
-    public void add(Cell e) {
-        if (e != null)
-            entities.add(e);
+    fun add(e: Cell?) {
+        if (e != null) entities.add(e)
     }
 
-    public Chunk[] getChunks() {
-        return chunks;
+    val allCells: Collection<Cell>
+        get() = entities
+
+    fun update() {
+        for (chunk in chunks) chunk!!.clear()
+        entities.removeIf { obj: Cell -> obj.isDead }
+        entities.forEach(Consumer { e: Cell -> this.allocateToChunk(e) })
     }
 
-    public Collection<Cell> getAllCells() {
-        return entities;
-    }
-
-    public void update() {
-        for (Chunk chunk : chunks)
-            chunk.clear();
-
-        entities.removeIf(Cell::isDead);
-        entities.forEach(this::allocateToChunk);
-    }
-
-    public float getChunkSize() {
-        return chunkSize;
-    }
-
-    public float getXMin() {
-        return xMin;
-    }
-
-    public float getYMin() {
-        return yMin;
-    }
-
-    public float getXMax() {
-        return xMax;
-    }
-
-    public float getYMax() {
-        return yMax;
-    }
-
-    public int getNYChunks() {
-        return nYChunks;
-    }
-
-    public int getNXChunks() {
-        return nXChunks;
-    }
-
-    public void allocateToChunk(Rock rock) {
-        int iMax = Integer.MIN_VALUE;
-        int iMin = Integer.MAX_VALUE;
-        int jMax = Integer.MIN_VALUE;
-        int jMin = Integer.MAX_VALUE;
-        for (Vector2 p : rock.points) {
-            Chunk chunk = getChunk(p);
-            int i = (int) chunk.getChunkCoords().x;
-            int j = (int) chunk.getChunkCoords().y;
-            iMax = Math.max(i, iMax);
-            iMin = Math.min(i, iMin);
-            jMax = Math.max(j, jMax);
-            jMin = Math.min(j, jMin);
+    fun allocateToChunk(rock: Rock) {
+        var iMax = Int.MIN_VALUE
+        var iMin = Int.MAX_VALUE
+        var jMax = Int.MIN_VALUE
+        var jMin = Int.MAX_VALUE
+        for (p in rock.points) {
+            val chunk = getChunk(p)
+            val i = chunk!!.chunkCoords.x.toInt()
+            val j = chunk!!.chunkCoords.y.toInt()
+            iMax = Math.max(i, iMax)
+            iMin = Math.min(i, iMin)
+            jMax = Math.max(j, jMax)
+            jMin = Math.min(j, jMin)
         }
-        for (int i = iMin; i <= iMax; i++)
-            for (int j = jMin; j <= jMax; j++)
-                chunks[toChunkID(i, j)].addRock(rock);
+        for (i in iMin..iMax) for (j in jMin..jMax) chunks[toChunkID(i, j)]!!.addRock(rock)
+    }
+
+    companion object {
+        const val serialVersionUID = 1L
     }
 }

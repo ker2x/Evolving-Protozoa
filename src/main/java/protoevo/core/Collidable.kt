@@ -1,27 +1,23 @@
-package protoevo.core;
+package protoevo.core
 
-import protoevo.utils.Vector2;
+import protoevo.utils.Vector2
+import java.awt.Color
+import java.io.Serializable
 
-import java.awt.*;
-import java.io.Serializable;
+abstract class Collidable {
+    class Collision : Serializable {
+        val point = Vector2(0f, 0f)
+        var collided = false
 
-public abstract class Collidable {
-
-    public static class Collision implements Serializable {
-        public static final long serialVersionUID = 1L;
-
-        public final Vector2 point = new Vector2(0, 0);
-        public boolean collided;
+        companion object {
+            const val serialVersionUID = 1L
+        }
     }
 
-    public abstract boolean pointInside(Vector2 p);
-    public abstract boolean rayIntersects(Vector2 start, Vector2 end);
-    public abstract void rayCollisions(Vector2 start, Vector2 end, Collision[] collisions);
-
-    public abstract Color getColor();
-
-    public abstract Vector2[] getBoundingBox();
-
-    public abstract boolean handlePotentialCollision(Collidable other, float delta);
-
+    abstract fun pointInside(p: Vector2?): Boolean
+    abstract fun rayIntersects(start: Vector2?, end: Vector2?): Boolean
+    abstract fun rayCollisions(start: Vector2?, end: Vector2?, collisions: Array<Collision>)
+    abstract fun getColor(): Color?
+    abstract fun getBoundingBox(): Array<Vector2?>?
+    abstract fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean
 }

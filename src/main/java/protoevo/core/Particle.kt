@@ -33,8 +33,8 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
 
     open fun physicsStep(delta: Float) {
         val chunkManager = tank.chunkManager
-        val entities = chunkManager.broadCollisionDetection(pos, radius)
-        entities.forEachRemaining { o: Collidable -> handlePotentialCollision(o, delta) }
+        val entities = chunkManager.broadCollisionDetection(pos!!, radius)
+        entities.forEachRemaining { o: Collidable? -> handlePotentialCollision(o, delta) }
         if (prevPos == null) prevPos = pos!!.copy()
         vel = if (delta != 0f) pos!!.sub(prevPos!!).scale(1 / delta) else return
         move(delta)
@@ -65,11 +65,11 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         acc.translate(da!!)
     }
 
-    override fun pointInside(p: Vector2): Boolean {
-        return isPointInsideCircle(pos!!, getRadius(), p)
+    override fun pointInside(p: Vector2?): Boolean {
+        return isPointInsideCircle(pos!!, getRadius(), p!!)
     }
 
-    override fun rayIntersects(start: Vector2, end: Vector2): Boolean {
+    override fun rayIntersects(start: Vector2?, end: Vector2?): Boolean {
         return false
     }
 
@@ -78,9 +78,9 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         Vector2(0f, 0f), Vector2(0f, 0f)
     )
 
-    override fun rayCollisions(start: Vector2, end: Vector2, collisions: Array<Collision>) {
+    override fun rayCollisions(start: Vector2?, end: Vector2?, collisions: Array<Collision>) {
         for (collision in collisions) collision.collided = false
-        val ray = end.take(start).nor()
+        val ray = end!!.take(start!!).nor()
         val p = collisions[0].point.set(pos!!).take(start)
         val a = ray.len2()
         val b = -2 * ray.dot(p)
@@ -99,7 +99,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         }
     }
 
-    override fun handlePotentialCollision(other: Collidable, delta: Float): Boolean {
+    override fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean {
         if (other is Particle) return handlePotentialCollision(
             other,
             delta
@@ -199,7 +199,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     val massDensity: Float
         get() = 1000f
 
-    override fun getBoundingBox(): Array<Vector2> {
+    override fun getBoundingBox(): Array<Vector2?>? {
         val x = pos!!.x
         val y = pos!!.y
         val r = getRadius()
@@ -216,7 +216,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         if (this.radius < Settings.minParticleRadius) this.radius = Settings.minParticleRadius
     }
 
-    override fun getColor(): Color {
+    override fun getColor(): Color? {
         return Color.WHITE.darker()
     }
 

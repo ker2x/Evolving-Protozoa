@@ -5,8 +5,11 @@ import java.util.*
 import javax.swing.SwingUtilities
 
 class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
-    var mousePosition = Vector2(0f, 0f)
+    var currentMousePosition = Vector2(0f, 0f)
         private set
+get() {
+        return currentMousePosition
+    }
     private var positionOnLeftClickDown = Vector2(0f, 0f)
     var mouseLeftClickDelta: Vector2? = Vector2(0f, 0f)
         private set
@@ -29,7 +32,7 @@ class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, Mo
 
     fun reset() {
         mouseWheelRotation = 0
-        mousePosition = Vector2(0f, 0f)
+        currentMousePosition = Vector2(0f, 0f)
         mouseLeftClickDelta = Vector2(0f, 0f)
         positionOnLeftClickDown = Vector2(0f, 0f)
     }
@@ -62,7 +65,7 @@ class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, Mo
         get() = getMouse(3)
 
     override fun mouseDragged(event: MouseEvent) {
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
         mouseLeftClickDelta = if (SwingUtilities.isLeftMouseButton(event)) {
             val newPosition = Vector2(event.x.toFloat(), event.y.toFloat())
             newPosition.sub(positionOnLeftClickDown)
@@ -72,25 +75,25 @@ class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, Mo
     }
 
     override fun mouseMoved(event: MouseEvent) {
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
     }
 
     override fun mouseClicked(event: MouseEvent) {
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
     }
 
     override fun mouseEntered(event: MouseEvent) {
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
     }
 
     override fun mouseExited(event: MouseEvent) {
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
     }
 
     override fun mousePressed(event: MouseEvent) {
         val button = event.button
-        mousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
-        if (SwingUtilities.isLeftMouseButton(event)) positionOnLeftClickDown = mousePosition
+        currentMousePosition = Vector2(event.x.toFloat(), event.y.toFloat())
+        if (SwingUtilities.isLeftMouseButton(event)) positionOnLeftClickDown = currentMousePosition
         if (0 < button && button < mouseButtons.size) mouseButtons[button] = true
     }
 

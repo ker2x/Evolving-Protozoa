@@ -78,7 +78,7 @@ class Tank : Iterable<Cell?>, Serializable {
                 }
             }
             RockGeneration.generateRocks(this)
-            rocks.forEach(Consumer { rock: Rock? -> chunkManager.allocateToChunk(rock) })
+            rocks.forEach(Consumer { rock: Rock? -> chunkManager.allocateToChunk(rock!!) })
             if (clusterCentres != null) initialisePopulation(
                 Arrays.copyOfRange(
                     clusterCentres,
@@ -277,8 +277,8 @@ class Tank : Iterable<Cell?>, Serializable {
         return nPellets
     }
 
-    override fun iterator(): MutableIterator<Cell> {
-        return chunkManager.allCells.iterator()
+    override fun iterator(): Iterator<Cell> {
+        return chunkManager!!.allCells!!.iterator()
     }
 
     fun isCollidingWithAnything(e: Cell): Boolean {

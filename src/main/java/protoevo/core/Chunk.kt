@@ -1,74 +1,59 @@
-package protoevo.core;
+package protoevo.core
 
-import protoevo.biology.Cell;
-import com.google.common.collect.Iterators;
-import protoevo.env.Rock;
-import protoevo.utils.Vector2;
+import com.google.common.collect.Iterators
+import protoevo.biology.Cell
+import protoevo.env.Rock
+import protoevo.utils.Vector2
+import java.io.Serializable
 
-import java.io.Serializable;
-import java.util.*;
+class Chunk(private val x: Int, private val y: Int, private val chunkManager: ChunkManager) : Serializable {
+    private val entities: MutableList<Cell?>
+    private val rocks: MutableList<Rock>
 
-public class Chunk implements Serializable {
-
-    public static final long serialVersionUID = 4697424153087580763L;
-
-    private final List<Cell> entities;
-    private final List<Rock> rocks;
-    private final int x;
-    private final int y;
-    private final ChunkManager chunkManager;
-
-    public Chunk(int x, int y, ChunkManager chunkManager) {
-        this.x = x;
-        this.y = y;
-        this.chunkManager = chunkManager;
-
-        entities = new ArrayList<>();
-        rocks = new ArrayList<>();
+    init {
+        entities = ArrayList()
+        rocks = ArrayList()
     }
 
-    public Vector2 getChunkCoords() {
-        return new Vector2((float) x, (float) y);
+    val chunkCoords: Vector2
+        get() = Vector2(x.toFloat(), y.toFloat())
+    val tankCoords: Vector2?
+        get() = chunkManager.toTankCoords(chunkCoords)
+    val cells: Collection<Cell?>
+        get() = entities
+
+    fun addEntity(e: Cell?) {
+        entities.add(e)
     }
 
-    public Vector2 getTankCoords() {
-        return this.chunkManager.toTankCoords(getChunkCoords());
+    fun addRock(rock: Rock) {
+        rocks.add(rock)
     }
 
-    public Collection<Cell> getCells() {
-        return entities;
+    operator fun contains(rock: Rock): Boolean {
+        return rocks.contains(rock)
     }
 
-    public void addEntity(Cell e) {
-        entities.add(e);
-    }
-
-    public void addRock(Rock rock) {
-        rocks.add(rock);
-    }
-
-    public boolean contains(Rock rock) {
-        return rocks.contains(rock);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Chunk) {
-            Chunk otherChunk = (Chunk) o;
-            return otherChunk.x == x && otherChunk.y == y;
+    override fun equals(o: Any?): Boolean {
+        if (o is Chunk) {
+            val otherChunk = o
+            return otherChunk.x == x && otherChunk.y == y
         }
-        return false;
+        return false
     }
 
-    public void clear() {
-        entities.clear();
+    fun clear() {
+        entities.clear()
     }
 
-    public Iterator<Collidable> getCollidables() {
-        return Iterators.concat(entities.iterator(), rocks.iterator());
+    val collidables: Iterator<Collidable?>
+        get() = Iterators.concat<Collidable?>(entities.iterator(), rocks.iterator())
+
+    fun getRocks(): Collection<Rock> {
+        return rocks
     }
 
-    public Collection<Rock> getRocks() {
-        return rocks;
+    companion object {
+        const val serialVersionUID = 4697424153087580763L
     }
 }

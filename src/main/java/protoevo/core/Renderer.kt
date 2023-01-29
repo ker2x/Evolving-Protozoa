@@ -65,12 +65,12 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
     fun retina(g: Graphics2D, p: Protozoan) {
         val pos = toRenderSpace(p.pos)
         val r: Float = toRenderSpace(p.radius).toFloat()
-        val c = p.color
+        val c = p.getColor()
         val dt = p.getRetina().cellAngle
         val fov = p.getRetina().fov
         val t0 = -p.dir.angle() - 0.5f * fov - rotate
         var t = t0
-        g.color = c.darker()
+        g.color = c!!.darker()
         g.fillArc(
             (pos.x - r).toInt(),
             (pos.y - r).toInt(),
@@ -100,7 +100,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 t += dt
             }
         }
-        g.color = c.darker()
+        g.color = c!!.darker()
         g.fillArc(
             (pos.x - 0.8 * r).toInt(),
             (pos.y - 0.8 * r).toInt(),
@@ -136,14 +136,14 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         val r: Float = toRenderSpace(p.radius).toFloat()
         if (circleNotVisible(pos, r)) return
         if (!p.wasJustDamaged) {
-            drawOutlinedCircle(g, pos, r, p.color)
+            drawOutlinedCircle(g, pos, r, p.getColor()!!)
         } else {
-            drawOutlinedCircle(g, pos, r, p.color, Color.RED)
+            drawOutlinedCircle(g, pos, r, p.getColor()!!, Color.RED)
         }
         for (spike in p.spikes) {
             if (r > 0.001 * window.height) {
                 val s = g.stroke
-                g.color = p.color.darker().darker()
+                g.color = p.getColor()!!.darker().darker()
                 g.stroke = BasicStroke((r * 0.2).toInt().toFloat())
                 val spikeStartPos = p.dir.unit().rotate(spike.angle).setLength(r).translate(pos)
                 val spikeLen = toRenderSpace(p.getSpikeLength(spike)).toFloat()
@@ -174,11 +174,11 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                     nucleus.addPoint(x, y)
                     t += dt
                 }
-                val b = p.mate!!.color.brighter()
+                val b = p.mate!!.getColor()!!.brighter()
                 g.color = Color(b.red, b.green, b.blue, 50)
                 g.fillPolygon(nucleus)
             }
-            val b = p.color.brighter()
+            val b = p.getColor()!!.brighter()
             fillCircle(g, pos, 3 * r / 7f, Color(b.red, b.green, b.blue, 50))
         }
     }
@@ -237,7 +237,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
     fun pellet(g: Graphics2D, p: EdibleCell) {
         val pos = toRenderSpace(p.pos)
         val r: Float = toRenderSpace(p.radius).toFloat()
-        drawOutlinedCircle(g, pos, r, p.color)
+        drawOutlinedCircle(g, pos, r, p.getColor()!!)
         if (simulation.inDebugMode()) stats["Pellets Rendered"] = stats["Pellets Rendered"]!! + 1
     }
 
@@ -275,10 +275,10 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         val r1: Float = toRenderSpace(e.radius).toFloat()
         val ePos = toRenderSpace(e.pos)
         if (circleNotVisible(ePos, r1) || e.cellBindings.isEmpty()) return
-        val eColor = e.color
-        val red = eColor.red
-        val green = eColor.green
-        val blue = eColor.blue
+        val eColor = e.getColor()
+        val red = eColor!!.red
+        val green = eColor!!.green
+        val blue = eColor!!.blue
         for (binding in e.cellBindings) {
             val attached = binding.destinationEntity
             val r2: Float = toRenderSpace(attached.radius).toFloat()
@@ -286,11 +286,11 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
             val s = g.stroke
             g.stroke = BasicStroke(1.5f * r)
             val attachedPos = toRenderSpace(attached.pos)
-            val attachedColor = attached.color
+            val attachedColor = attached.getColor()
             g.color = Color(
-                (red + attachedColor.red) / 2,
-                (green + attachedColor.green) / 2,
-                (blue + attachedColor.blue) / 2
+                (red + attachedColor!!.red) / 2,
+                (green + attachedColor!!.green) / 2,
+                (blue + attachedColor!!.blue) / 2
             ).brighter()
             g.drawLine(ePos.x.toInt(), ePos.y.toInt(), attachedPos.x.toInt(), attachedPos.y.toInt())
             g.stroke = s
@@ -298,13 +298,13 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
     }
 
     fun entities(g: Graphics2D, tank: Tank?) {
-        for (chunk in tank!!.chunkManager.chunks) for (e in chunk.cells) renderEntityAttachments(g, e)
-        for (chunk in tank.chunkManager.chunks) renderChunk(g, chunk)
+        for (chunk in tank!!.chunkManager.chunks) for (e in chunk!!.cells) renderEntityAttachments(g, e!!)
+        for (chunk in tank.chunkManager.chunks) renderChunk(g, chunk!!)
         if (simulation.inDebugMode() && tracked != null) {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
             val chunkManager = tank.chunkManager
             val collisionEntities = chunkManager.broadCollisionDetection(
-                tracked!!.pos, tracked!!.radius
+                tracked!!.pos!!, tracked!!.radius
             )
             collisionEntities.forEachRemaining { o: Collidable? ->
                 stats["Broad Collision"] = 1 + stats.getOrDefault("Broad Collision", 0)
@@ -314,13 +314,13 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 val p = tracked as Protozoan
                 drawCollisionBounds(g, tracked as Protozoan, p.interactRange, Color.WHITE.darker())
                 val interactCells = chunkManager.broadEntityDetection(
-                    (tracked as Protozoan).pos, p.interactRange
+                    (tracked as Protozoan)!!.pos!!, p.interactRange
                 )
                 while (interactCells.hasNext()) {
                     val cell = interactCells.next()
                     if (p.cullFromRayCasting(cell)) continue
                     stats["Broad Interact"] = 1 + stats.getOrDefault("Broad Interact", 0)
-                    drawCollisionBounds(g, cell, 1.1f * cell.radius, Color.WHITE.darker())
+                    drawCollisionBounds(g, cell!!, 1.1f * cell.radius, Color.WHITE.darker())
                 }
                 for (sensor in p.contactSensors) {
                     val sensorPos = p.getSensorPosition(sensor)
@@ -345,9 +345,9 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
             for (i in screenPoints.indices) xPoints[i] = screenPoints[i]!!.x.toInt()
             for (i in screenPoints.indices) yPoints[i] = screenPoints[i]!!.y.toInt()
             val color = Color(
-                rock!!.color.red,
-                rock!!.color.green,
-                rock!!.color.blue,
+                rock!!.getColor()!!.red,
+                rock!!.getColor()!!.green,
+                rock!!.getColor()!!.blue,
                 if (simulation.inDebugMode()) 100 else 255
             )
             g.color = color
@@ -501,7 +501,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
             val chunkManager = simulation.tank!!.chunkManager
             val w = toRenderSpace(chunkManager.chunkSize)
             for (chunk in chunkManager.chunks) {
-                val chunkCoords = toRenderSpace(chunk.tankCoords)
+                val chunkCoords = toRenderSpace(chunk!!.tankCoords)
                 graphics.drawRect(chunkCoords.x.toInt(), chunkCoords.y.toInt(), w, w)
             }
             if (antiAliasing) graphics.setRenderingHint(

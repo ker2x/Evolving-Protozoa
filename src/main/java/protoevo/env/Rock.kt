@@ -14,7 +14,7 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
     private val edgeAttachStates: BooleanArray
     val centre: Vector2
     val normals: Array<Vector2?>
-    private val boundingBox: Array<Vector2>
+    private val boundingBox: Array<Vector2?>?
     private val colour: Color
     private fun computeCentre(): Vector2 {
         val c = Vector2(0f, 0f)
@@ -22,7 +22,7 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         return c.scale(1f / points.size)
     }
 
-    private fun computeBounds(): Array<Vector2> {
+    private fun computeBounds(): Array<Vector2?>? {
         val minX = Math.min(points[0]!!.x, Math.min(points[1]!!.x, points[2]!!.x))
         val minY = Math.min(points[0]!!.y, Math.min(points[1]!!.y, points[2]!!.y))
         val maxX = Math.max(points[0]!!.x, Math.max(points[1]!!.x, points[2]!!.x))
@@ -30,11 +30,8 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         return arrayOf(Vector2(minX, minY), Vector2(maxX, maxY))
     }
 
-    override fun getBoundingBox(): Array<Vector2> {
-        return boundingBox
-    }
 
-    override fun handlePotentialCollision(other: Collidable, delta: Float): Boolean {
+    override fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean {
         return if (other is Cell) other.handlePotentialCollision(this, delta) else false
     }
 
@@ -69,16 +66,16 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
                 - (p2.x - p3.x) * (p1.y - p3.y))
     }
 
-    override fun pointInside(x: Vector2): Boolean {
-        val d1 = sign(x, points[0], points[1])
-        val d2 = sign(x, points[1], points[2])
-        val d3 = sign(x, points[2], points[0])
+    override fun pointInside(x: Vector2?): Boolean {
+        val d1 = sign(x!!, points[0], points[1])
+        val d2 = sign(x!!, points[1], points[2])
+        val d3 = sign(x!!, points[2], points[0])
         val hasNeg = d1 < 0 || d2 < 0 || d3 < 0
         val hasPos = d1 > 0 || d2 > 0 || d3 > 0
         return !(hasNeg && hasPos)
     }
 
-    override fun rayIntersects(start: Vector2, end: Vector2): Boolean {
+    override fun rayIntersects(start: Vector2?, end: Vector2?): Boolean {
         return false
     }
 
@@ -98,9 +95,9 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         boundingBox = computeBounds()
     }
 
-    override fun rayCollisions(start: Vector2, end: Vector2, collisions: Array<Collision>) {
+    override fun rayCollisions(start: Vector2?, end: Vector2?, collisions: Array<Collision>) {
         for (collision in collisions) collision.collided = false
-        val dirRay = end.take(start)
+        val dirRay = end!!.take(start!!)
         var bestT = Float.MAX_VALUE
         for (i in edges.indices) {
             if (isEdgeAttached(i)) continue
@@ -118,13 +115,17 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         }
     }
 
+    override fun getColor(): Color? {
+        return colour
+    }
+
+    override fun getBoundingBox(): Array<Vector2?>? {
+        return boundingBox
+    }
+
     fun intersectsWith(otherRock: Rock?): Boolean {
         for (e1 in otherRock!!.edges) for (e2 in edges) if (edgesIntersect(e1, e2)) return true
         return false
-    }
-
-    override fun getColor(): Color {
-        return colour
     }
 
     fun allEdgesAttached(): Boolean {
