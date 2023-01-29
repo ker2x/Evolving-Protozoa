@@ -7,9 +7,6 @@ import javax.swing.SwingUtilities
 class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
     var currentMousePosition = Vector2(0f, 0f)
         private set
-//get() {
-//        return currentMousePosition
-//    }
     private var positionOnLeftClickDown = Vector2(0f, 0f)
     var mouseLeftClickDelta: Vector2? = Vector2(0f, 0f)
         private set
