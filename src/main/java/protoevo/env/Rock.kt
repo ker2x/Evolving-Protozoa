@@ -22,7 +22,7 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         return c.scale(1f / points.size)
     }
 
-    private fun computeBounds(): Array<Vector2?>? {
+    private fun computeBounds(): Array<Vector2?> {
         val minX = Math.min(points[0]!!.x, Math.min(points[1]!!.x, points[2]!!.x))
         val minY = Math.min(points[0]!!.y, Math.min(points[1]!!.y, points[2]!!.y))
         val maxX = Math.max(points[0]!!.x, Math.max(points[1]!!.x, points[2]!!.x))
@@ -115,7 +115,7 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         }
     }
 
-    override fun getColor(): Color? {
+    override fun getColor(): Color {
         return colour
     }
 

@@ -74,7 +74,7 @@ class Tank : Iterable<Cell?>, Serializable {
                     val minR =
                         Math.max(0.1f, 5 * (Settings.populationClusterRadius - Settings.populationClusterRadiusRange))
                     val radius = Simulation.RANDOM.nextFloat() * (maxR - minR) + minR
-                    RockGeneration.generateRingOfRocks(this, clusterCentres[j], radius, 0.05f)
+                    generateRingOfRocks(this, clusterCentres[j], radius, 0.05f)
                 }
             }
             RockGeneration.generateRocks(this)

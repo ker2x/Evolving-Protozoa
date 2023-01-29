@@ -15,7 +15,7 @@ interface Brain : Serializable {
     companion object {
 
         @JvmField
-        public final val RANDOM: Brain = object : Brain {
+        val RANDOM: Brain = object : Brain {
             val serialVersionUID = 1648484737904226314L
             override fun tick(p: Protozoan?) {}
             override fun turn(p: Protozoan?): Float {
@@ -42,7 +42,7 @@ interface Brain : Serializable {
         }
 
         @JvmField
-        public final val EMPTY: Brain = object : Brain {
+        val EMPTY: Brain = object : Brain {
             override fun tick(p: Protozoan?) {}
             override fun turn(p: Protozoan?): Float {
                 return 0f

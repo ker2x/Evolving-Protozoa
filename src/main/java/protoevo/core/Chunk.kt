@@ -17,7 +17,7 @@ class Chunk(private val x: Int, private val y: Int, private val chunkManager: Ch
 
     val chunkCoords: Vector2
         get() = Vector2(x.toFloat(), y.toFloat())
-    val tankCoords: Vector2?
+    val tankCoords: Vector2
         get() = chunkManager.toTankCoords(chunkCoords)
     val cells: Collection<Cell?>
         get() = entities

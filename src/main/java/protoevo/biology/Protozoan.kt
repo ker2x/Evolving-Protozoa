@@ -93,7 +93,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         return super.handlePotentialCollision(other, delta)
     }
 
-    override val prettyName: String?
+    override val prettyName: String
         get() = "Protozoan"
 
     fun cullFromRayCasting(o: Collidable?): Boolean {
@@ -332,7 +332,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     fun age(delta: Float) {
         deathRate = getRadius() * delta * Settings.protozoaStarvationFactor
         //		deathRate *= 0.75f + 0.25f * getSpeed();
-        deathRate *= Settings.spikeDeathRatePenalty.pow(spikes.size).toFloat()
+        deathRate *= Settings.spikeDeathRatePenalty.pow(spikes.size)
         _health -= deathRate
     }
 
