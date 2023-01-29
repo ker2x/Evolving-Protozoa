@@ -1,5 +1,6 @@
 package protoevo.biology;
 
+import org.jetbrains.annotations.NotNull;
 import protoevo.core.ChunkManager;
 import protoevo.core.Particle;
 import protoevo.core.Settings;
@@ -34,7 +35,7 @@ public class PlantCell extends EdibleCell {
     }
 
     @Override
-    public boolean handlePotentialCollision(Particle p, float delta) {
+    public boolean handlePotentialCollision(@NotNull Particle p, float delta) {
         boolean collision = super.handlePotentialCollision(p, delta);
         if (p != this && p instanceof PlantCell) {
             PlantCell otherPlant = (PlantCell) p;

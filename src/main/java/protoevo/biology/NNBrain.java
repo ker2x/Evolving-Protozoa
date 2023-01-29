@@ -48,7 +48,7 @@ public class NNBrain implements Brain {
             inputs[i++] = chemicalSolution.getPlantPheromoneDensity(chemicalX1, chemicalY2) -
                     chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY1);
             int chemicalX = chemicalSolution.toChemicalGridX(p.pos.x);
-            int chemicalY = chemicalSolution.toChemicalGridX(p.pos.y);
+            int chemicalY = chemicalSolution.toChemicalGridY(p.pos.y);
             inputs[i++] = 2 * chemicalSolution.getPlantPheromoneDensity(chemicalX, chemicalY) - 1;
         }
 
