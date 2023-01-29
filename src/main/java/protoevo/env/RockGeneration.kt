@@ -1,207 +1,182 @@
-package protoevo.env;
+package protoevo.env
 
-import protoevo.core.Settings;
-import protoevo.core.Simulation;
-import protoevo.utils.Geometry;
-import protoevo.utils.Vector2;
+import protoevo.core.Settings
+import protoevo.core.Simulation
+import protoevo.utils.Geometry.doesLineIntersectCircle
+import protoevo.utils.Vector2
+import protoevo.utils.Vector2.Companion.fromAngle
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class RockGeneration {
-
-    public static void generateRingOfRocks(Tank tank, Vector2 ringCentre, float ringRadius) {
-        generateRingOfRocks(tank, ringCentre, ringRadius, 0f);
-    }
-
-    public static void generateRingOfRocks(Tank tank, Vector2 ringCentre, float ringRadius, float breakProb) {
-        float angleDelta = (float) (2 * Math.asin(Settings.minRockSize / (2 * ringRadius)));
-        Rock currentRock = null;
-        for (float angle = 0; angle < 2*Math.PI; angle += angleDelta) {
+object RockGeneration {
+    @JvmOverloads
+    fun generateRingOfRocks(tank: Tank, ringCentre: Vector2?, ringRadius: Float, breakProb: Float = 0f) {
+        val angleDelta = (2 * Math.asin((Settings.minRockSize / (2 * ringRadius)).toDouble())).toFloat()
+        var currentRock: Rock? = null
+        var angle = 0f
+        while (angle < 2 * Math.PI) {
             if (breakProb > 0 && Simulation.RANDOM.nextFloat() < breakProb) {
-                currentRock = null;
-                angle += angleDelta * 10;
+                currentRock = null
+                angle += angleDelta * 10
             }
             if (currentRock == null || currentRock.allEdgesAttached()) {
-                currentRock = newCircumferenceRockAtAngle(ringCentre, ringRadius, angle);
-                if (isRockObstructed(currentRock, tank.getRocks(), Settings.minRockOpeningSize)) {
-                    currentRock = null;
+                currentRock = newCircumferenceRockAtAngle(ringCentre, ringRadius, angle)
+                if (isRockObstructed(currentRock, tank.rocks, Settings.minRockOpeningSize)) {
+                    currentRock = null
                 } else {
-                    tank.getRocks().add(currentRock);
+                    tank.rocks.add(currentRock)
                 }
             } else {
-                Rock bestNextRock = null;
-                float bestRockDistToCirc = Float.MAX_VALUE;
-                int bestRockAttachIdx = -1;
-                for (int i = 0; i < currentRock.getEdges().length; i++) {
-                    float sizeRange = (Settings.maxRockSize - Settings.minRockOpeningSize);
-                    float rockSize = 1.5f * Settings.minRockOpeningSize + sizeRange * Simulation.RANDOM.nextFloat();
+                var bestNextRock: Rock? = null
+                var bestRockDistToCirc = Float.MAX_VALUE
+                var bestRockAttachIdx = -1
+                for (i in currentRock.edges.indices) {
+                    val sizeRange = Settings.maxRockSize - Settings.minRockOpeningSize
+                    val rockSize = 1.5f * Settings.minRockOpeningSize + sizeRange * Simulation.RANDOM.nextFloat()
                     if (!currentRock.isEdgeAttached(i)) {
-                        Rock newRock = newAttachedRock(currentRock, i, tank.getRocks(), rockSize);
+                        val newRock = newAttachedRock(currentRock, i, tank.rocks, rockSize)
                         if (newRock != null) {
-                            float dist = Math.abs(newRock.getCentre().sub(ringCentre).len() - ringRadius);
+                            val dist = Math.abs(newRock.centre.sub(ringCentre!!).len() - ringRadius)
                             if (dist < bestRockDistToCirc) {
-                                bestRockDistToCirc = dist;
-                                bestNextRock = newRock;
-                                bestRockAttachIdx = i;
+                                bestRockDistToCirc = dist
+                                bestNextRock = newRock
+                                bestRockAttachIdx = i
                             }
                         }
                     }
                 }
                 if (bestNextRock != null) {
-                    tank.getRocks().add(bestNextRock);
-                    bestNextRock.setEdgeAttached(0);
-                    currentRock.setEdgeAttached(bestRockAttachIdx);
+                    tank.rocks.add(bestNextRock)
+                    bestNextRock.setEdgeAttached(0)
+                    currentRock.setEdgeAttached(bestRockAttachIdx)
                 }
-                currentRock = bestNextRock;
+                currentRock = bestNextRock
             }
+            angle += angleDelta
         }
     }
 
-    private static Rock newCircumferenceRockAtAngle(Vector2 pos, float r, float angle) {
-        Vector2 dir = Vector2.fromAngle(angle);
-        Vector2 centre = dir.mul(r).add(pos);
-        return newRockAt(centre, dir);
+    private fun newCircumferenceRockAtAngle(pos: Vector2?, r: Float, angle: Float): Rock {
+        val dir = fromAngle(angle)
+        val centre = dir.mul(r).add(pos!!)
+        return newRockAt(centre, dir)
     }
 
-
-    public static void generateRocks(Tank tank) {
-        List<Rock> unattachedRocks = new ArrayList<>();
-        for (Rock rock : tank.getRocks())
-            if (!rock.allEdgesAttached())
-                unattachedRocks.add(rock);
-
-
-
-        for (int i = 0; i < Settings.rockGenerationIterations; i++) {
-            if (i < Settings.rockSeedingIterations
-                    || unattachedRocks.size() == 0
-                    || Simulation.RANDOM.nextFloat() > Settings.rockClustering) {
-                Rock rock = newRock(tank);
-                if (tryAdd(rock, tank.getRocks())) {
-                    unattachedRocks.add(rock);
+    fun generateRocks(tank: Tank) {
+        val unattachedRocks: MutableList<Rock?> = ArrayList()
+        for (rock in tank.rocks) if (!rock!!.allEdgesAttached()) unattachedRocks.add(rock)
+        for (i in 0 until Settings.rockGenerationIterations) {
+            if (i < Settings.rockSeedingIterations || unattachedRocks.size == 0 || Simulation.RANDOM.nextFloat() > Settings.rockClustering) {
+                val rock = newRock(tank)
+                if (tryAdd(rock, tank.rocks)) {
+                    unattachedRocks.add(rock)
                 }
             } else {
-                Rock toAttach = selectRandomUnattachedRock(tank, unattachedRocks);
-                int edgeIdx = 0;
+                val toAttach = selectRandomUnattachedRock(tank, unattachedRocks)
+                var edgeIdx = 0
                 while (edgeIdx < 3) {
-                    if (!toAttach.isEdgeAttached(edgeIdx))
-                        break;
-                    edgeIdx++;
+                    if (!toAttach!!.isEdgeAttached(edgeIdx)) break
+                    edgeIdx++
                 }
-                if (edgeIdx == 3)
-                    continue;
-
-                Rock rock = newAttachedRock(toAttach, edgeIdx, tank.getRocks());
+                if (edgeIdx == 3) continue
+                val rock = newAttachedRock(toAttach, edgeIdx, tank.rocks)
                 if (rock != null) {
-                    tank.getRocks().add(rock);
-                    unattachedRocks.add(rock);
-                    rock.setEdgeAttached(0);
-                    toAttach.setEdgeAttached(edgeIdx);
+                    tank.rocks.add(rock)
+                    unattachedRocks.add(rock)
+                    rock.setEdgeAttached(0)
+                    toAttach!!.setEdgeAttached(edgeIdx)
                     if (edgeIdx == 2) // no edges left to attach to
-                        unattachedRocks.remove(toAttach);
+                        unattachedRocks.remove(toAttach)
                 }
             }
         }
     }
 
-    public static Rock newAttachedRock(Rock toAttach, int edgeIdx, List<Rock> rocks) {
-        float sizeRange = (Settings.maxRockSize - Settings.minRockSize);
-        float rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat();
-        return newAttachedRock(toAttach, edgeIdx, rocks, rockSize);
+    fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?): Rock? {
+        val sizeRange = Settings.maxRockSize - Settings.minRockSize
+        val rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat()
+        return newAttachedRock(toAttach, edgeIdx, rocks, rockSize)
     }
 
-    public static Rock newAttachedRock(Rock toAttach, int edgeIdx, List<Rock> rocks, float rockSize) {
-        Vector2[] edge = toAttach.getEdge(edgeIdx);
-        Vector2 normal = toAttach.getNormals()[edgeIdx];
-        Vector2 p1 = edge[0], p2 = edge[1];
-
-        Vector2 p3 = p1.add(p2).scale(0.5f).translate(normal.unit().scale(rockSize));
-
-        Vector2[] newEdge1 = new Vector2[]{p1, p3};
-        Vector2[] newEdge2 = new Vector2[]{p2, p3};
-        if (notInAnyRocks(newEdge1, newEdge2, rocks, toAttach)
-                && leavesOpening(p3, rocks, Settings.minRockOpeningSize)) {
-            return new Rock(p1, p2, p3);
-        }
-        return null;
+    fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?, rockSize: Float): Rock? {
+        val edge = toAttach!!.getEdge(edgeIdx)
+        val normal = toAttach.normals[edgeIdx]
+        val p1 = edge!![0]
+        val p2 = edge[1]
+        val p3 = p1!!.add(p2!!).scale(0.5f).translate(normal!!.unit().scale(rockSize))
+        val newEdge1 = arrayOf<Vector2?>(p1, p3)
+        val newEdge2 = arrayOf<Vector2?>(p2, p3)
+        return if (notInAnyRocks(newEdge1, newEdge2, rocks, toAttach)
+            && leavesOpening(p3, rocks, Settings.minRockOpeningSize)
+        ) {
+            Rock(p1, p2, p3)
+        } else null
     }
 
-    private static Rock selectRandomUnattachedRock(Tank tank, List<Rock> unattachedRocks) {
-        int i = Simulation.RANDOM.nextInt(unattachedRocks.size());
-        return unattachedRocks.get(i);
+    private fun selectRandomUnattachedRock(tank: Tank, unattachedRocks: List<Rock?>): Rock? {
+        val i = Simulation.RANDOM.nextInt(unattachedRocks.size)
+        return unattachedRocks[i]
     }
 
-    private static boolean tryAdd(Rock rock, List<Rock> rocks) {
-        for (Rock otherRock : rocks)
-            if (rock.intersectsWith(otherRock))
-                return false;
-        rocks.add(rock);
-        return true;
+    private fun tryAdd(rock: Rock, rocks: MutableList<Rock?>?): Boolean {
+        for (otherRock in rocks!!) if (rock.intersectsWith(otherRock)) return false
+        rocks.add(rock)
+        return true
     }
 
-    private static boolean isRockObstructed(Rock rock, List<Rock> rocks, float openingSize) {
-        for (Rock otherRock : rocks)
-            if (otherRock.intersectsWith(rock))
-                return true;
-        if (openingSize > 0)
-            for (Vector2 point : rock.getPoints())
-                if (!leavesOpening(point, rocks, openingSize))
-                    return true;
-        return false;
+    private fun isRockObstructed(rock: Rock?, rocks: List<Rock?>?, openingSize: Float): Boolean {
+        for (otherRock in rocks!!) if (otherRock!!.intersectsWith(rock)) return true
+        if (openingSize > 0) for (point in rock!!.points) if (!leavesOpening(point, rocks, openingSize)) return true
+        return false
     }
 
-    private static boolean notInAnyRocks(Vector2[] e1, Vector2[] e2, List<Rock> rocks, Rock excluding) {
-        for (Rock rock : rocks)
-            for (Vector2[] rockEdge : rock.getEdges())
-                if (!rock.equals(excluding) &&
-                        (Rock.edgesIntersect(rockEdge, e1) || Rock.edgesIntersect(rockEdge, e2)))
-                    return false;
-        return true;
+    private fun notInAnyRocks(
+        e1: Array<Vector2?>,
+        e2: Array<Vector2?>,
+        rocks: List<Rock?>?,
+        excluding: Rock?
+    ): Boolean {
+        for (rock in rocks!!) for (rockEdge in rock!!.edges) if (rock != excluding &&
+            (Rock.Companion.edgesIntersect(rockEdge, e1) || Rock.Companion.edgesIntersect(rockEdge, e2))
+        ) return false
+        return true
     }
 
-    private static boolean leavesOpening(Vector2 rockPoint, List<Rock> rocks, float openingSize) {
-        for (Rock rock : rocks) {
-            for (Vector2[] edge : rock.getEdges()) {
-                if (Geometry.doesLineIntersectCircle(edge, rockPoint, openingSize))
-                    return false;
+    private fun leavesOpening(rockPoint: Vector2?, rocks: List<Rock?>?, openingSize: Float): Boolean {
+        for (rock in rocks!!) {
+            for (edge in rock!!.edges) {
+                if (doesLineIntersectCircle(edge, rockPoint!!, openingSize)) return false
             }
         }
-        return true;
+        return true
     }
 
-    public static Rock newRock(Tank tank) {
-        float centreR = tank.getRadius() * Simulation.RANDOM.nextFloat();
-        float centreT = (float) (2*Math.PI * Simulation.RANDOM.nextFloat());
-        Vector2 centre = Vector2.fromAngle(centreT).setLength(centreR);
-        return newRockAt(centre);
+    fun newRock(tank: Tank): Rock {
+        val centreR = tank.radius * Simulation.RANDOM.nextFloat()
+        val centreT = (2 * Math.PI * Simulation.RANDOM.nextFloat()).toFloat()
+        val centre = fromAngle(centreT).setLength(centreR)
+        return newRockAt(centre)
     }
 
-    public static Rock newRockAt(Vector2 centre) {
-        Vector2 dir = Vector2.fromAngle((float) (2 * Math.PI * Simulation.RANDOM.nextFloat()));
-        return newRockAt(centre, dir);
+    fun newRockAt(centre: Vector2): Rock {
+        val dir = fromAngle((2 * Math.PI * Simulation.RANDOM.nextFloat()).toFloat())
+        return newRockAt(centre, dir)
     }
 
-    public static Rock newRockAt(Vector2 centre, Vector2 dir) {
-        float sizeRange = (Settings.maxRockSize - Settings.minRockSize);
-        float rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat();
-
-        float k1 = 0.95f + 0.1f * Simulation.RANDOM.nextFloat();
-        Vector2 p1 = centre.add(dir.setLength(k1 * rockSize));
-
-        float tMin = Settings.minRockSpikiness;
-        float tMax = (float) (2*Math.PI / 3);
-        float t1 = tMin + (tMax - 2*tMin) * Simulation.RANDOM.nextFloat();
-        float k2 = 0.95f + 0.1f * Simulation.RANDOM.nextFloat();
-        dir = dir.rotate(t1);
-        Vector2 p2 = centre.add(dir.setLength(k2 * rockSize));
-
-        float t2 = tMin + (tMax - tMin) * Simulation.RANDOM.nextFloat();
-        float l3 = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat();
-        dir = dir.rotate(t2);
-        Vector2 p3 = centre.add(dir.setLength(l3));
-
-        return new Rock(p1, p2, p3);
-
+    fun newRockAt(centre: Vector2, dir: Vector2): Rock {
+        var dir = dir
+        val sizeRange = Settings.maxRockSize - Settings.minRockSize
+        val rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat()
+        val k1 = 0.95f + 0.1f * Simulation.RANDOM.nextFloat()
+        val p1 = centre.add(dir.setLength(k1 * rockSize))
+        val tMin = Settings.minRockSpikiness
+        val tMax = (2 * Math.PI / 3).toFloat()
+        val t1 = tMin + (tMax - 2 * tMin) * Simulation.RANDOM.nextFloat()
+        val k2 = 0.95f + 0.1f * Simulation.RANDOM.nextFloat()
+        dir = dir.rotate(t1)
+        val p2 = centre.add(dir.setLength(k2 * rockSize))
+        val t2 = tMin + (tMax - tMin) * Simulation.RANDOM.nextFloat()
+        val l3 = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat()
+        dir = dir.rotate(t2)
+        val p3 = centre.add(dir.setLength(l3))
+        return Rock(p1, p2, p3)
     }
 }

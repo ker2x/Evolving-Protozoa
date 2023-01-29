@@ -23,9 +23,9 @@ object Geometry {
     }
 
     @JvmStatic
-    fun doesLineIntersectCircle(line: Array<Vector2>, circlePos: Vector2, circleR: Float): Boolean {
-        val dir = line[1].sub(line[0])
-        val x = circlePos.sub(line[0])
+    fun doesLineIntersectCircle(line: Array<Vector2?>, circlePos: Vector2, circleR: Float): Boolean {
+        val dir = line[1]!!.sub(line[0]!!)
+        val x = circlePos.sub(line[0]!!)
         val intersectionCoefs = circleIntersectLineCoefficients(dir, x, circleR)
         return lineIntersectCondition(intersectionCoefs)
     }

@@ -189,7 +189,7 @@ public class ChunkManager implements Serializable {
         int iMin = Integer.MAX_VALUE;
         int jMax = Integer.MIN_VALUE;
         int jMin = Integer.MAX_VALUE;
-        for (Vector2 p : rock.getPoints()) {
+        for (Vector2 p : rock.points) {
             Chunk chunk = getChunk(p);
             int i = (int) chunk.getChunkCoords().x;
             int j = (int) chunk.getChunkCoords().y;

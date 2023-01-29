@@ -1,360 +1,311 @@
-package protoevo.env;
+package protoevo.env
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import protoevo.biology.Cell
+import protoevo.biology.MeatCell
+import protoevo.biology.PlantCell
+import protoevo.biology.Protozoan
+import protoevo.core.ChunkManager
+import protoevo.core.Settings
+import protoevo.core.Simulation
+import protoevo.env.RockGeneration.generateRingOfRocks
+import protoevo.utils.FileIO.appendLine
+import protoevo.utils.Vector2
+import java.io.Serializable
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.stream.Collectors
 
-import protoevo.biology.*;
-import protoevo.biology.genes.Gene;
-import protoevo.core.ChunkManager;
-import protoevo.core.Settings;
-import protoevo.core.Simulation;
-import protoevo.utils.FileIO;
-import protoevo.utils.Vector2;
+class Tank : Iterable<Cell?>, Serializable {
+    @JvmField
+	val radius = Settings.tankRadius
+    var elapsedTime: Float
+        private set
+    @JvmField
+	val cellCounts = ConcurrentHashMap<Class<out Cell>, Int>(3, 1f)
+    @JvmField
+	val cellCapacities = ConcurrentHashMap<Class<out Cell>, Int>(3, 1f)
+    @JvmField
+	val chunkManager: ChunkManager
+    @JvmField
+	var chemicalSolution: ChemicalSolution? = null
+    val rocks: MutableList<Rock?>
+    var generation: Long = 1
+        private set
+    private var protozoaBorn: Long = 0
+    private var totalCellsAdded: Long = 0
+    private var crossoverEvents: Long = 0
+    private var genomeFile: String? = null
+    private val genomesToWrite: MutableList<String> = ArrayList()
+    private val entitiesToAdd: MutableList<Cell> = ArrayList()
+    private var hasInitialised: Boolean
 
-public class Tank implements Iterable<Cell>, Serializable
-{
-	private static final long serialVersionUID = 2804817237950199223L;
-	private final float radius = Settings.tankRadius;
-	private float elapsedTime;
-	public final ConcurrentHashMap<Class<? extends Cell>, Integer> cellCounts =
-			new ConcurrentHashMap<>(3, 1);
-	public final ConcurrentHashMap<Class<? extends Cell>, Integer> cellCapacities =
-			new ConcurrentHashMap<>(3, 1);
-	private final ChunkManager chunkManager;
-	private final ChemicalSolution chemicalSolution;
-	private final List<Rock> rocks;
-	private long generation = 1, protozoaBorn = 0, totalCellsAdded = 0, crossoverEvents = 0;
-
-	private String genomeFile = null;
-	private final List<String> genomesToWrite = new ArrayList<>();
-
-	private final List<Cell> entitiesToAdd = new ArrayList<>();
-	private boolean hasInitialised;
-
-	public Tank() 
-	{
-		float chunkSize = 2 * radius / Settings.numChunkBreaks;
-		chunkManager = new ChunkManager(-radius, radius, -radius, radius, chunkSize);
-
-		if (Settings.enableChemicalField) {
-			float chemicalGridSize = 2 * radius / Settings.numChemicalBreaks;
-			chemicalSolution = new ChemicalSolution(-radius, radius, -radius, radius, chemicalGridSize);
-		} else {
-			chemicalSolution = null;
-		}
-
-		rocks = new ArrayList<>();
-
-		elapsedTime = 0;
-		hasInitialised = false;
-	}
-
-	public void initialise() {
-		if (chemicalSolution != null)
-			chemicalSolution.initialise();
-
-		if (!hasInitialised) {
-			Vector2[] clusterCentres = null;
-			if (Settings.initialPopulationClustering) {
-				clusterCentres = new Vector2[Settings.numRingClusters];
-				for (int i = 0; i < Settings.numPopulationClusters; i++) {
-					clusterCentres[i] = randomPosition(Settings.populationClusterRadius);
-					RockGeneration.generateRingOfRocks(this, clusterCentres[i],
-							5 * Settings.populationClusterRadius);
-				}
-				for (int j = Settings.numPopulationClusters; j < clusterCentres.length; j++) {
-					clusterCentres[j] = randomPosition(Settings.populationClusterRadius);
-					float maxR = 5 * (Settings.populationClusterRadius + Settings.populationClusterRadiusRange);
-					float minR = Math.max(0.1f, 5 * (Settings.populationClusterRadius - Settings.populationClusterRadiusRange));
-					float radius = Simulation.RANDOM.nextFloat() * (maxR - minR) + minR;
-					RockGeneration.generateRingOfRocks(this, clusterCentres[j], radius, 0.05f);
-				}
-			}
-			RockGeneration.generateRocks(this);
-
-			rocks.forEach(chunkManager::allocateToChunk);
-			if (clusterCentres != null)
-				initialisePopulation(Arrays.copyOfRange(clusterCentres, 0, Settings.numPopulationClusters));
-			else
-				initialisePopulation();
-			flushEntitiesToAdd();
-
-			if (Settings.writeGenomes && genomeFile != null)
-				writeGenomeHeaders();
-
-			hasInitialised = true;
-		}
-	}
-
-	public void writeGenomeHeaders() {
-		Protozoan protozoan = chunkManager.getAllCells()
-				.stream()
-				.filter(cell -> cell instanceof Protozoan)
-				.map(cell -> (Protozoan) cell)
-				.findAny()
-				.orElseThrow(() -> new RuntimeException("No initial population present"));
-
-		StringBuilder headerStr = new StringBuilder();
-		headerStr.append("Generation,Time Elapsed,Parent 1 ID,Parent 2 ID,ID,");
-		for (Gene<?> gene : protozoan.genome.getGenes())
-			headerStr.append(gene.getTraitName()).append(",");
-
-		FileIO.appendLine(genomeFile, headerStr.toString());
-	}
-
-	public boolean hasBeenInitialised() {
-		return hasInitialised;
-	}
-
-	public void initialisePopulation(Vector2[] clusterCentres) {
-		Function<Float, Vector2> findPlantPosition = this::randomPosition;
-		Function<Float, Vector2> findProtozoaPosition = this::randomPosition;
-		if (clusterCentres != null) {
-			findPlantPosition = r -> randomPosition(1.5f*r, clusterCentres);
-			findProtozoaPosition = r -> randomPosition(r, clusterCentres);
-		}
-
-		for (int i = 0; i < Settings.numInitialPlantPellets; i++)
-			addRandom(new PlantCell(this), findPlantPosition);
-
-		for (int i = 0; i < Settings.numInitialProtozoa; i++) {
-			try {
-				addRandom(new Protozoan(this), findProtozoaPosition);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
-	public void initialisePopulation() {
-		Vector2[] clusterCentres = new Vector2[Settings.numPopulationClusters];
-		for (int i = 0; i < clusterCentres.length; i++)
-			clusterCentres[i] = randomPosition(Settings.populationClusterRadius);
-		initialisePopulation(clusterCentres);
-	}
-
-	public Vector2 randomPosition(float entityRadius, Vector2[] clusterCentres) {
-		int clusterIdx = Simulation.RANDOM.nextInt(clusterCentres.length);
-		Vector2 clusterCentre = clusterCentres[clusterIdx];
-		return randomPosition(entityRadius, clusterCentre, Settings.populationClusterRadius);
-	}
-
-	public Vector2 randomPosition(float entityRadius, Vector2 centre, float clusterRadius) {
-		float rad = clusterRadius - 4*entityRadius;
-		float t = (float) (2 * Math.PI * Simulation.RANDOM.nextDouble());
-		float r = 2*entityRadius + rad * Simulation.RANDOM.nextFloat();
-		return new Vector2(
-				(float) (r * Math.cos(t)),
-				(float) (r * Math.sin(t))
-		).add(centre);
-	}
-
-	public Vector2 randomPosition(float entityRadius) {
-		return randomPosition(entityRadius, Vector2.ZERO, radius);
-	}
-
-	public void handleTankEdge(Cell e) {
-		float rPos = e.pos.len();
-		if (Settings.sphericalTank && rPos - e.getRadius() > radius)
-			e.pos.setLength(-0.98f * radius);
-		else if (rPos + e.getRadius() > radius) {
-			e.pos.setLength(radius - e.getRadius());
-			Vector2 normal = e.pos.unit().scale(-1);
-			e.getVel().translate(normal.mul(-2*normal.dot(e.getVel())));
-		}
-
-	}
-
-	public void updateCell(Cell e, float delta) {
-		e.handleInteractions(delta);
-		e.update(delta);
-		handleTankEdge(e);
-	}
-
-	private void flushEntitiesToAdd() {
-		entitiesToAdd.forEach(chunkManager::add);
-		entitiesToAdd.clear();
-		chunkManager.update();
-	}
-
-	private void flushWrites() {
-		List<String> genomeWritesHandled = new ArrayList<>();
-		for (String line : genomesToWrite) {
-			FileIO.appendLine(genomeFile, line);
-			genomeWritesHandled.add(line);
-		}
-		genomesToWrite.removeAll(genomeWritesHandled);
-	}
-
-	public void update(float delta) 
-	{
-		elapsedTime += delta;
-		flushEntitiesToAdd();
-		flushWrites();
-
-		Collection<Cell> cells = chunkManager.getAllCells();
-
-		cells.parallelStream().forEach(Cell::resetPhysics);
-		cells.parallelStream().forEach(cell -> updateCell(cell, delta));
-		cells.parallelStream().forEach(cell -> cell.physicsUpdate(delta));
-		cells.parallelStream().forEach(this::handleDeadEntities);
-
-		updateCounts(cells);
-		if (chemicalSolution != null)
-			chemicalSolution.update(delta, cells);
-
-	}
-
-	private void updateCounts(Collection<Cell> entities) {
-		cellCounts.clear();
-		for (Cell e : entities)
-			cellCounts.put(e.getClass(), 1 + cellCounts.getOrDefault(e.getClass(), 0));
-	}
-
-	private void handleDeadEntities(Cell e) {
-		if (!e.isDead())
-			return;
-		e.handleDeath();
-	}
-
-	private void handleNewProtozoa(Protozoan p) {
-		protozoaBorn++;
-		generation = Math.max(generation, p.getGeneration());
-
-		if (genomeFile != null && Settings.writeGenomes) {
-			String genomeLine = p.getGeneration() + "," + elapsedTime + "," + p.genome.toString();
-			genomesToWrite.add(genomeLine);
-		}
-	}
-
-	public void add(Cell e) {
-		if (cellCounts.getOrDefault(e.getClass(), 0)
-				>= cellCapacities.getOrDefault(e.getClass(), 0))
-			return;
-
-		totalCellsAdded++;
-		entitiesToAdd.add(e);
-
-		if (e instanceof Protozoan)
-			handleNewProtozoa((Protozoan) e);
-	}
-
-	public Collection<Cell> getEntities() {
-		return chunkManager.getAllCells();
-	}
-
-	public Map<String, Float> getStats(boolean includeProtozoaStats) {
-		Map<String, Float> stats = new TreeMap<>();
-		stats.put("Protozoa", (float) numberOfProtozoa());
-		stats.put("Plants", (float) cellCounts.getOrDefault(PlantCell.class, 0));
-		stats.put("Meat Pellets", (float) cellCounts.getOrDefault(MeatCell.class, 0));
-		stats.put("Max Generation", (float) generation);
-		stats.put("Time Elapsed", elapsedTime);
-		stats.put("Protozoa Born", (float) protozoaBorn);
-		stats.put("Total Entities Born", (float) totalCellsAdded);
-		stats.put("Crossover Events", (float) crossoverEvents);
-		if (includeProtozoaStats)
-			stats.putAll(getProtozoaStats());
-		return stats;
-	}
-
-	public Map<String, Float> getStats() {
-		return getStats(false);
-	}
-
-	public Map<String, Float> getProtozoaStats() {
-		Map<String, Float> stats = new TreeMap<>();
-		Collection<Protozoan> protozoa = chunkManager.getAllCells()
-				.stream()
-				.filter(cell -> cell instanceof Protozoan)
-				.map(cell -> (Protozoan) cell)
-				.collect(Collectors.toSet());
-
-		for (Cell e : protozoa) {
-			for (Map.Entry<String, Float> stat : e.getStats().entrySet()) {
-				String key = "Sum " + stat.getKey();
-				float currentValue = stats.getOrDefault(key, 0f);
-				stats.put(key, stat.getValue() + currentValue);
-			}
-		}
-
-		int numProtozoa = protozoa.size();
-		for (Cell e : protozoa) {
-			for (Map.Entry<String, Float> stat : e.getStats().entrySet()) {
-				float sumValue = stats.getOrDefault("Sum " + stat.getKey(), 0f);
-				float mean = sumValue / numProtozoa;
-				stats.put("Mean " + stat.getKey(), mean);
-				float currVar = stats.getOrDefault("Var " + stat.getKey(), 0f);
-				float deltaVar = (float) Math.pow(stat.getValue() - mean, 2) / numProtozoa;
-				stats.put("Var " + stat.getKey(), currVar + deltaVar);
-			}
-		}
-		return stats;
-	}
-	
-	public int numberOfProtozoa() {
-		return cellCounts.getOrDefault(Protozoan.class, 0);
-	}
-	
-	public int numberOfPellets() {
-		int nPellets = cellCounts.getOrDefault(PlantCell.class, 0);
-		nPellets += cellCounts.getOrDefault(MeatCell.class, 0);
-		return nPellets;
-	}
-
-	public ChunkManager getChunkManager() {
-		return chunkManager;
-	}
-
-	@Override
-	public Iterator<Cell> iterator() {
-		return chunkManager.getAllCells().iterator();
-	}
-
-	public float getRadius() {
-		return radius;
-	}
-
-	public long getGeneration() {
-		return generation;
-	}
-
-	public boolean isCollidingWithAnything(Cell e) {
-		if (chunkManager.getAllCells().stream().anyMatch(e::isCollidingWith))
-			return true;
-		return rocks.stream().anyMatch(e::isCollidingWith);
-	}
-
-    public void addRandom(Cell e, Function<Float, Vector2> findPosition) {
-		for (int i = 0; i < 5; i++) {
-			e.pos = findPosition.apply(e.getRadius());
-			if (!isCollidingWithAnything(e)) {
-				add(e);
-				return;
-			}
-		}
+    init {
+        val chunkSize = 2 * radius / Settings.numChunkBreaks
+        chunkManager = ChunkManager(-radius, radius, -radius, radius, chunkSize)
+        chemicalSolution = if (Settings.enableChemicalField) {
+            val chemicalGridSize = 2 * radius / Settings.numChemicalBreaks
+            ChemicalSolution(-radius, radius, -radius, radius, chemicalGridSize)
+        } else {
+            null
+        }
+        rocks = ArrayList()
+        elapsedTime = 0f
+        hasInitialised = false
     }
 
-	public float getElapsedTime() {
-		return elapsedTime;
-	}
+    fun initialise() {
+        chemicalSolution?.initialise()
+        if (!hasInitialised) {
+            var clusterCentres: Array<Vector2?>? = null
+            if (Settings.initialPopulationClustering) {
+                clusterCentres = arrayOfNulls(Settings.numRingClusters)
+                for (i in 0 until Settings.numPopulationClusters) {
+                    clusterCentres[i] = randomPosition(Settings.populationClusterRadius)
+                    generateRingOfRocks(
+                        this, clusterCentres[i],
+                        5 * Settings.populationClusterRadius
+                    )
+                }
+                for (j in Settings.numPopulationClusters until clusterCentres.size) {
+                    clusterCentres[j] = randomPosition(Settings.populationClusterRadius)
+                    val maxR = 5 * (Settings.populationClusterRadius + Settings.populationClusterRadiusRange)
+                    val minR =
+                        Math.max(0.1f, 5 * (Settings.populationClusterRadius - Settings.populationClusterRadiusRange))
+                    val radius = Simulation.RANDOM.nextFloat() * (maxR - minR) + minR
+                    RockGeneration.generateRingOfRocks(this, clusterCentres[j], radius, 0.05f)
+                }
+            }
+            RockGeneration.generateRocks(this)
+            rocks.forEach(Consumer { rock: Rock? -> chunkManager.allocateToChunk(rock) })
+            if (clusterCentres != null) initialisePopulation(
+                Arrays.copyOfRange(
+                    clusterCentres,
+                    0,
+                    Settings.numPopulationClusters
+                )
+            ) else initialisePopulation()
+            flushEntitiesToAdd()
+            if (Settings.writeGenomes && genomeFile != null) writeGenomeHeaders()
+            hasInitialised = true
+        }
+    }
 
-	public void setGenomeFile(String genomeFile) {
-		this.genomeFile = genomeFile;
-	}
+    fun writeGenomeHeaders() {
+        val protozoan = chunkManager.allCells
+            .stream()
+            .filter { cell: Cell? -> cell is Protozoan }
+            .map { cell: Cell -> cell as Protozoan }
+            .findAny()
+            .orElseThrow { RuntimeException("No initial population present") }
+        val headerStr = StringBuilder()
+        headerStr.append("Generation,Time Elapsed,Parent 1 ID,Parent 2 ID,ID,")
+        for (gene in protozoan.genome.genes) headerStr.append(gene.traitName).append(",")
+        appendLine(genomeFile, headerStr.toString())
+    }
 
-	public ChemicalSolution getChemicalSolution() {
-		return chemicalSolution;
-	}
+    fun hasBeenInitialised(): Boolean {
+        return hasInitialised
+    }
 
-	public List<Rock> getRocks() {
-		return rocks;
-	}
+    fun initialisePopulation(clusterCentres: Array<Vector2?>?) {
+        var findPlantPosition = Function { entityRadius: Float -> this.randomPosition(entityRadius) }
+        var findProtozoaPosition = Function { entityRadius: Float -> this.randomPosition(entityRadius) }
+        if (clusterCentres != null) {
+            findPlantPosition = Function { r: Float -> randomPosition(1.5f * r, clusterCentres) }
+            findProtozoaPosition = Function { r: Float -> randomPosition(r, clusterCentres) }
+        }
+        for (i in 0 until Settings.numInitialPlantPellets) addRandom(PlantCell(this), findPlantPosition)
+        for (i in 0 until Settings.numInitialProtozoa) {
+            try {
+                addRandom(Protozoan(this), findProtozoaPosition)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
-	public void registerCrossoverEvent() {
-		crossoverEvents++;
-	}
+    fun initialisePopulation() {
+        val clusterCentres = arrayOfNulls<Vector2>(Settings.numPopulationClusters)
+        for (i in clusterCentres.indices) clusterCentres[i] = randomPosition(Settings.populationClusterRadius)
+        initialisePopulation(clusterCentres)
+    }
+
+    fun randomPosition(entityRadius: Float, clusterCentres: Array<Vector2?>): Vector2 {
+        val clusterIdx = Simulation.RANDOM.nextInt(clusterCentres.size)
+        val clusterCentre = clusterCentres[clusterIdx]
+        return randomPosition(entityRadius, clusterCentre, Settings.populationClusterRadius)
+    }
+
+    @JvmOverloads
+    fun randomPosition(entityRadius: Float, centre: Vector2? = Vector2.ZERO, clusterRadius: Float = radius): Vector2 {
+        val rad = clusterRadius - 4 * entityRadius
+        val t = (2 * Math.PI * Simulation.RANDOM.nextDouble()).toFloat()
+        val r = 2 * entityRadius + rad * Simulation.RANDOM.nextFloat()
+        return Vector2((r * Math.cos(t.toDouble())).toFloat(), (r * Math.sin(t.toDouble())).toFloat()).add(
+            centre!!
+        )
+    }
+
+    fun handleTankEdge(e: Cell) {
+        val rPos = e.pos!!.len()
+        if (Settings.sphericalTank && rPos - e.radius > radius) e.pos!!.setLength(-0.98f * radius) else if (rPos + e.radius > radius) {
+            e.pos!!.setLength(radius - e.radius)
+            val normal = e.pos!!.unit().scale(-1f)
+            e.getVel().translate(normal.mul(-2 * normal.dot(e.getVel())))
+        }
+    }
+
+    fun updateCell(e: Cell, delta: Float) {
+        e.handleInteractions(delta)
+        e.update(delta)
+        handleTankEdge(e)
+    }
+
+    private fun flushEntitiesToAdd() {
+        entitiesToAdd.forEach(Consumer { e: Cell? -> chunkManager.add(e) })
+        entitiesToAdd.clear()
+        chunkManager.update()
+    }
+
+    private fun flushWrites() {
+        val genomeWritesHandled: MutableList<String> = ArrayList()
+        for (line in genomesToWrite) {
+            appendLine(genomeFile, line)
+            genomeWritesHandled.add(line)
+        }
+        genomesToWrite.removeAll(genomeWritesHandled)
+    }
+
+    fun update(delta: Float) {
+        elapsedTime += delta
+        flushEntitiesToAdd()
+        flushWrites()
+        val cells = chunkManager.allCells
+        cells.parallelStream().forEach { obj: Cell -> obj.resetPhysics() }
+        cells.parallelStream().forEach { cell: Cell -> updateCell(cell, delta) }
+        cells.parallelStream().forEach { cell: Cell -> cell.physicsUpdate(delta) }
+        cells.parallelStream().forEach { e: Cell -> handleDeadEntities(e) }
+        updateCounts(cells)
+        chemicalSolution?.update(delta, cells)
+    }
+
+    private fun updateCounts(entities: Collection<Cell>) {
+        cellCounts.clear()
+        for (e in entities) cellCounts[e.javaClass] = 1 + cellCounts.getOrDefault(e.javaClass, 0)
+    }
+
+    private fun handleDeadEntities(e: Cell) {
+        if (!e.isDead) return
+        e.handleDeath()
+    }
+
+    private fun handleNewProtozoa(p: Protozoan) {
+        protozoaBorn++
+        generation = Math.max(generation, p.generation.toLong())
+        if (genomeFile != null && Settings.writeGenomes) {
+            val genomeLine = p.generation.toString() + "," + elapsedTime + "," + p.genome.toString()
+            genomesToWrite.add(genomeLine)
+        }
+    }
+
+    fun add(e: Cell) {
+        if (cellCounts.getOrDefault(e.javaClass, 0)
+            >= cellCapacities.getOrDefault(e.javaClass, 0)
+        ) return
+        totalCellsAdded++
+        entitiesToAdd.add(e)
+        if (e is Protozoan) handleNewProtozoa(e)
+    }
+
+    val entities: Collection<Cell>
+        get() = chunkManager.allCells
+
+    fun getStats(includeProtozoaStats: Boolean): Map<String, Float> {
+        val stats: MutableMap<String, Float> = TreeMap()
+        stats["Protozoa"] = numberOfProtozoa().toFloat()
+        stats["Plants"] = cellCounts.getOrDefault(PlantCell::class.java, 0).toFloat()
+        stats["Meat Pellets"] = cellCounts.getOrDefault(MeatCell::class.java, 0).toFloat()
+        stats["Max Generation"] = generation.toFloat()
+        stats["Time Elapsed"] = elapsedTime
+        stats["Protozoa Born"] = protozoaBorn.toFloat()
+        stats["Total Entities Born"] = totalCellsAdded.toFloat()
+        stats["Crossover Events"] = crossoverEvents.toFloat()
+        if (includeProtozoaStats) stats.putAll(protozoaStats)
+        return stats
+    }
+
+    val stats: Map<String, Float>
+        get() = getStats(false)
+    val protozoaStats: Map<String, Float>
+        get() {
+            val stats: MutableMap<String, Float> = TreeMap()
+            val protozoa: Collection<Protozoan> = chunkManager.allCells
+                .stream()
+                .filter { cell: Cell? -> cell is Protozoan }
+                .map { cell: Cell -> cell as Protozoan }
+                .collect(Collectors.toSet())
+            for (e in protozoa) {
+                for ((key1, value) in e.stats) {
+                    val key = "Sum $key1"
+                    val currentValue = stats.getOrDefault(key, 0f)
+                    stats[key] = value + currentValue
+                }
+            }
+            val numProtozoa = protozoa.size
+            for (e in protozoa) {
+                for ((key, value) in e.stats) {
+                    val sumValue = stats.getOrDefault("Sum $key", 0f)
+                    val mean = sumValue / numProtozoa
+                    stats["Mean $key"] = mean
+                    val currVar = stats.getOrDefault("Var $key", 0f)
+                    val deltaVar = Math.pow((value - mean).toDouble(), 2.0).toFloat() / numProtozoa
+                    stats["Var $key"] = currVar + deltaVar
+                }
+            }
+            return stats
+        }
+
+    fun numberOfProtozoa(): Int {
+        return cellCounts.getOrDefault(Protozoan::class.java, 0)
+    }
+
+    fun numberOfPellets(): Int {
+        var nPellets = cellCounts.getOrDefault(PlantCell::class.java, 0)
+        nPellets += cellCounts.getOrDefault(MeatCell::class.java, 0)
+        return nPellets
+    }
+
+    override fun iterator(): MutableIterator<Cell> {
+        return chunkManager.allCells.iterator()
+    }
+
+    fun isCollidingWithAnything(e: Cell): Boolean {
+        return if (chunkManager.allCells.stream()
+                .anyMatch { other: Cell? -> e.isCollidingWith(other) }
+        ) true else rocks.stream().anyMatch { rock: Rock? -> e.isCollidingWith(rock) }
+    }
+
+    fun addRandom(e: Cell, findPosition: Function<Float, Vector2>) {
+        for (i in 0..4) {
+            e.pos = findPosition.apply(e.radius)
+            if (!isCollidingWithAnything(e)) {
+                add(e)
+                return
+            }
+        }
+    }
+
+    fun setGenomeFile(genomeFile: String?) {
+        this.genomeFile = genomeFile
+    }
+
+    fun registerCrossoverEvent() {
+        crossoverEvents++
+    }
+
+    companion object {
+        private const val serialVersionUID = 2804817237950199223L
+    }
 }

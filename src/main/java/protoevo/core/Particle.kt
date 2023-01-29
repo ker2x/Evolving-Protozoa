@@ -139,8 +139,8 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         for (i in edges.indices) {
             val edge = edges[i]
             val normal = rock.normals[i]
-            val dir = edge[1].sub(edge[0])
-            val x = pos!!.sub(edge[0])
+            val dir = edge[1]!!.sub(edge[0]!!)
+            val x = pos!!.sub(edge[0]!!)
             if (dir.dot(normal) > 0) continue
             val coefs = circleIntersectLineCoefficients(dir, x, r)
             if (lineIntersectCondition(coefs)) {
@@ -148,7 +148,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
                 val t2 = coefs[1]
                 val t = (t1 + t2) / 2f
                 val offset = r - x.sub(dir.mul(t)).len()
-                pos.translate(normal.mul(offset))
+                pos.translate(normal!!.mul(offset))
                 recentRigidCollisions++
                 onRockCollisionCallback(rock, delta)
                 return true
@@ -163,10 +163,10 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     }
 
     fun isCollidingWith(rock: Rock): Boolean {
-        val edges = rock.edges
+        val edges = rock!!.edges!!
         val r = getRadius()
         val pos = pos
-        if (rock.pointInside(pos)) return true
+        if (rock.pointInside(pos!!)) return true
         for (edge in edges) {
             if (doesLineIntersectCircle(edge, pos!!, r)) return true
         }

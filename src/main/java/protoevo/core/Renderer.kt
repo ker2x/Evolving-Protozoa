@@ -339,15 +339,15 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         val xPoints = IntArray(screenPoints.size)
         val yPoints = IntArray(screenPoints.size)
         for (rock in tank!!.rocks) {
-            screenPoints[0] = toRenderSpace(rock.points[0])
-            screenPoints[1] = toRenderSpace(rock.points[1])
-            screenPoints[2] = toRenderSpace(rock.points[2])
+            screenPoints[0] = toRenderSpace(rock!!.points[0])
+            screenPoints[1] = toRenderSpace(rock!!.points[1])
+            screenPoints[2] = toRenderSpace(rock!!.points[2])
             for (i in screenPoints.indices) xPoints[i] = screenPoints[i]!!.x.toInt()
             for (i in screenPoints.indices) yPoints[i] = screenPoints[i]!!.y.toInt()
             val color = Color(
-                rock.color.red,
-                rock.color.green,
-                rock.color.blue,
+                rock!!.color.red,
+                rock!!.color.green,
+                rock!!.color.blue,
                 if (simulation.inDebugMode()) 100 else 255
             )
             g.color = color
@@ -374,8 +374,8 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 g.color = Color.YELLOW.darker()
                 for (i in 0..2) {
                     val edge = rock.getEdge(i)
-                    val edgeCentre = edge[0].add(edge[1]).scale(0.5f)
-                    val normalEnd = edgeCentre.add(rock.normals[i].mul(0.005f))
+                    val edgeCentre = edge[0]!!.add(edge[1]!!).scale(0.5f)
+                    val normalEnd = edgeCentre.add(rock.normals[i]!!.mul(0.005f))
                     val a = toRenderSpace(edgeCentre)
                     val b = toRenderSpace(normalEnd)
                     g.drawLine(a.x.toInt(), a.y.toInt(), b.x.toInt(), b.y.toInt())
@@ -467,9 +467,9 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 RenderingHints.VALUE_ANTIALIAS_OFF
             ) else graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val chemicalSolution = simulation.tank!!.chemicalSolution
-            val chemicalCellSize = toRenderSpace(chemicalSolution.gridSize)
-            for (i in 0 until chemicalSolution.nxChunks) {
-                for (j in 0 until chemicalSolution.nyChunks) {
+            val chemicalCellSize = toRenderSpace(chemicalSolution!!.gridSize)
+            for (i in 0 until chemicalSolution.nXChunks) {
+                for (j in 0 until chemicalSolution.nYChunks) {
                     val chemicalCellCoords = toRenderSpace(chemicalSolution.toTankCoords(i, j))
                     val x = chemicalCellCoords.x.toInt()
                     val y = chemicalCellCoords.y.toInt()

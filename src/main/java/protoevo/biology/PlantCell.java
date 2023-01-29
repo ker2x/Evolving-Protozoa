@@ -83,7 +83,7 @@ public class PlantCell extends EdibleCell {
             return;
 
         crowdingFactor = 0;
-        ChunkManager chunkManager = tank.getChunkManager();
+        ChunkManager chunkManager = tank.chunkManager;
         Iterator<Cell> entities = chunkManager.broadEntityDetection(pos, getRadius());
         entities.forEachRemaining(this::updateCrowding);
 

@@ -1,128 +1,92 @@
-package protoevo.env;
+package protoevo.env
 
-import protoevo.biology.Cell;
-import protoevo.biology.PlantCell;
-import protoevo.core.Settings;
-import protoevo.utils.Vector2;
+import protoevo.biology.Cell
+import protoevo.biology.PlantCell
+import protoevo.core.Particle
+import protoevo.core.Settings
+import protoevo.utils.Vector2
+import java.io.Serializable
+import java.util.*
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collection;
+class ChemicalSolution(
+    private val xMin: Float, private val xMax: Float,
+    private val yMin: Float, private val yMax: Float,
+    val gridSize: Float
+) : Serializable {
+    val nYChunks: Int
+    val nXChunks: Int
+    private val chemicalGrid: Array<Array<Chemical?>>
+    private var timeSinceUpdate = 0f
 
-public class ChemicalSolution implements Serializable {
-    public static final long serialVersionUID = 1L;
-
-    private final float gridSize;
-    private final float xMin;
-    private final float yMin;
-    private final float xMax;
-    private final float yMax;
-    private final int nYChunks;
-    private final int nXChunks;
-    private final Chemical[][] chemicalGrid;
-    private float timeSinceUpdate = 0;
-
-    public ChemicalSolution(float xMin, float xMax,
-                            float yMin, float yMax,
-                            float gridSize) {
-        this.xMin = xMin;
-        this.xMax = xMax;
-        this.yMin = yMin;
-        this.yMax = yMax;
-        this.gridSize = gridSize;
-
-        this.nXChunks = 2 + (int) ((xMax - xMin) / gridSize);
-        this.nYChunks = 2 + (int) ((yMax - yMin) / gridSize);
-
-        chemicalGrid = new Chemical[nXChunks][nYChunks];
-        for (int i = 0; i < nXChunks; i++)
-            for (int j = 0; j < nYChunks; j++)
-                chemicalGrid[i][j] = new Chemical();
+    init {
+        nXChunks = 2 + ((xMax - xMin) / gridSize).toInt()
+        nYChunks = 2 + ((yMax - yMin) / gridSize).toInt()
+        chemicalGrid = Array(nXChunks) { arrayOfNulls(nYChunks) }
+        for (i in 0 until nXChunks) for (j in 0 until nYChunks) chemicalGrid[i][j] = Chemical()
     }
 
-    public void initialise() {
-        for (int i = 1; i < nXChunks - 1; i++)
-            for (int j = 1; j < nYChunks - 1; j++)
-                chemicalGrid[i][j].setNeighbours(
-                        chemicalGrid[i][j-1],
-                        chemicalGrid[i][j+1],
-                        chemicalGrid[i-1][j],
-                        chemicalGrid[i+1][j]
-                );
+    fun initialise() {
+        for (i in 1 until nXChunks - 1) for (j in 1 until nYChunks - 1) chemicalGrid[i][j]!!.setNeighbours(
+            chemicalGrid[i][j - 1]!!,
+            chemicalGrid[i][j + 1]!!,
+            chemicalGrid[i - 1][j]!!,
+            chemicalGrid[i + 1][j]!!
+        )
     }
 
-    public Vector2 toTankCoords(int i, int j) {
-        float x = (i - 1) * gridSize + xMin;
-        float y = (j - 1) * gridSize + yMin;
-        return new Vector2(x, y);
+    fun toTankCoords(i: Int, j: Int): Vector2 {
+        val x = (i - 1) * gridSize + xMin
+        val y = (j - 1) * gridSize + yMin
+        return Vector2(x, y)
     }
 
-    public float getGridSize() {
-        return gridSize;
+    fun toChemicalGridX(x: Float): Int {
+        val i = (1 + (x - xMin) / gridSize).toInt()
+        if (i < 0) return 0
+        return if (i >= nXChunks) nXChunks - 1 else i
     }
 
-    public int toChemicalGridX(float x) {
-        int i = (int) (1 + (x - xMin) / gridSize);
-        if (i < 0)
-            return 0;
-        if (i >= nXChunks)
-            return nXChunks - 1;
-        return i;
+    fun toChemicalGridY(y: Float): Int {
+        val j = (1 + (y - yMin) / gridSize).toInt()
+        if (j < 0) return 0
+        return if (j >= nYChunks) nYChunks - 1 else j
     }
 
-    public int toChemicalGridY(float y) {
-        int j = (int) (1 + (y - yMin) / gridSize);
-        if (j < 0)
-            return 0;
-        if (j >= nYChunks)
-            return nYChunks - 1;
-        return j;
-    }
-
-    public void depositChemicals(float delta, Cell e) {
-        if (e instanceof PlantCell && !e.isDead()) {
-            int i = toChemicalGridX(e.pos.x);
-            int j = toChemicalGridY(e.pos.y);
-            float k = Settings.plantPheromoneDeposit;
-            chemicalGrid[i][j].currentPlantPheromoneDensity += delta * k * e.getRadius() * e.getHealth();
+    fun depositChemicals(delta: Float, e: Cell) {
+        if (e is PlantCell && !e.isDead()) {
+            val i = toChemicalGridX(e.pos!!.x)
+            val j = toChemicalGridY(e.pos!!.y)
+            val k = Settings.plantPheromoneDeposit
+            chemicalGrid[i][j]!!.currentPlantPheromoneDensity += delta * k * e.radius * e.getHealth()
         }
     }
 
-    public void update(float delta, Collection<Cell> entities) {
-        timeSinceUpdate += delta;
+    fun update(delta: Float, entities: Collection<Cell>) {
+        timeSinceUpdate += delta
         if (timeSinceUpdate >= Settings.chemicalsUpdateTime) {
-            entities.parallelStream().forEach(e -> depositChemicals(timeSinceUpdate, e));
-            Arrays.stream(chemicalGrid).parallel().forEach(
-                    row -> Arrays.stream(row).forEach(chemical -> chemical.propagate(timeSinceUpdate))
-            );
-            Arrays.stream(chemicalGrid).parallel().forEach(
-                    row -> Arrays.stream(row).forEach(Chemical::update)
-            );
-            timeSinceUpdate = 0;
+            entities.parallelStream().forEach { e: Cell -> depositChemicals(timeSinceUpdate, e) }
+            Arrays.stream(chemicalGrid).parallel().forEach { row: Array<Chemical?>? ->
+                Arrays.stream(row).forEach { chemical: Chemical? -> chemical!!.propagate(timeSinceUpdate) }
+            }
+            Arrays.stream(chemicalGrid).parallel()
+                .forEach { row: Array<Chemical?>? -> Arrays.stream(row).forEach { obj: Chemical? -> obj!!.update() } }
+            timeSinceUpdate = 0f
         }
     }
 
-    public float getPlantPheromoneGradientX(int i, int j) {
-        if (i < 1 || i >= nXChunks - 1)
-            return 0f;
-        return chemicalGrid[i-1][j].currentPlantPheromoneDensity - chemicalGrid[i+1][j].currentPlantPheromoneDensity;
+    fun getPlantPheromoneGradientX(i: Int, j: Int): Float {
+        return if (i < 1 || i >= nXChunks - 1) 0f else chemicalGrid[i - 1][j]!!.currentPlantPheromoneDensity - chemicalGrid[i + 1][j]!!.currentPlantPheromoneDensity
     }
 
-    public float getPlantPheromoneGradientY(int i, int j) {
-        if (j < 1 || j >= nYChunks - 1)
-            return 0f;
-        return chemicalGrid[i][j-1].currentPlantPheromoneDensity - chemicalGrid[i][j+1].currentPlantPheromoneDensity;
+    fun getPlantPheromoneGradientY(i: Int, j: Int): Float {
+        return if (j < 1 || j >= nYChunks - 1) 0f else chemicalGrid[i][j - 1]!!.currentPlantPheromoneDensity - chemicalGrid[i][j + 1]!!.currentPlantPheromoneDensity
     }
 
-    public int getNYChunks() {
-        return nYChunks;
+    fun getPlantPheromoneDensity(i: Int, j: Int): Float {
+        return chemicalGrid[i][j]!!.currentPlantPheromoneDensity
     }
 
-    public int getNXChunks() {
-        return nXChunks;
-    }
-
-    public float getPlantPheromoneDensity(int i, int j) {
-        return chemicalGrid[i][j].currentPlantPheromoneDensity;
+    companion object {
+        const val serialVersionUID = 1L
     }
 }

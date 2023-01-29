@@ -38,7 +38,7 @@ public class NNBrain implements Brain {
             inputs[i++] = sensor.inContact() ? 1f : 0f;
 
         if (Settings.enableChemicalField) {
-            ChemicalSolution chemicalSolution = p.tank.getChemicalSolution();
+            ChemicalSolution chemicalSolution = p.tank.chemicalSolution;
             int chemicalX1 = chemicalSolution.toChemicalGridX(p.pos.x - p.getRadius());
             int chemicalX2 = chemicalSolution.toChemicalGridX(p.pos.x + p.getRadius());
             int chemicalY1 = chemicalSolution.toChemicalGridY(p.pos.x - p.getRadius());

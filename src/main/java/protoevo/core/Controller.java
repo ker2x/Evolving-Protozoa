@@ -39,7 +39,7 @@ public class Controller
 		Vector2 chunkCoords = renderer.toRenderSpace(chunk.getTankCoords());
 		int originX = (int) chunkCoords.x;
 		int originY = (int) chunkCoords.y;
-		int chunkSize = renderer.toRenderSpace(simulation.getTank().getChunkManager().getChunkSize());
+		int chunkSize = renderer.toRenderSpace(simulation.getTank().chunkManager.getChunkSize());
 		return originX <= pos.x && pos.x < originX + chunkSize
 				&& originY <= pos.y && pos.y < originY + chunkSize;
 	}
@@ -66,7 +66,7 @@ public class Controller
 		Vector2 pos = input.getMousePosition();
 		boolean track = false;
 		synchronized (simulation.getTank()) {
-			for (Chunk chunk : simulation.getTank().getChunkManager().getChunks()) {
+			for (Chunk chunk : simulation.getTank().chunkManager.getChunks()) {
 				if (isPosInChunk(pos, chunk)) {
 					for (Cell e : chunk.getCells())
 					{
@@ -89,9 +89,9 @@ public class Controller
 	public void handleRightMouseClick() {
 		Vector2 pos = input.getMousePosition();
 		Tank tank = simulation.getTank();
-		int r = renderer.toRenderSpace(tank.getRadius() / 25f);
+		int r = renderer.toRenderSpace(tank.radius / 25f);
 		synchronized (simulation.getTank()) {
-			for (Chunk chunk : simulation.getTank().getChunkManager().getChunks()) {
+			for (Chunk chunk : simulation.getTank().chunkManager.getChunks()) {
 				for (Cell cell : chunk.getCells()) {
 					Vector2 cellPos = renderer.toRenderSpace(cell.pos);
 					Vector2 dir = cellPos.sub(pos);
@@ -100,7 +100,7 @@ public class Controller
 					while (dist < r*r && i < 8) {
 						float p = (r*r) / dist;
 						float strength = 1 / 100f;
-						dir.setLength(strength * p * tank.getRadius() / 8);
+						dir.setLength(strength * p * tank.radius / 8);
 						cell.physicsStep(Settings.simulationUpdateDelta);
 						cell.pos.translate(dir);
 						dist = cellPos.sub(pos).len2();
