@@ -17,7 +17,7 @@ class Controller(private val input: Input, private val simulation: Simulation, p
         input.registerOnPressHandler(KeyEvent.VK_F12) { renderer.toggleUI() }
     }
 
-    fun resetCamera() {
+    private fun resetCamera() {
         renderer.resetCamera()
         input.reset()
     }
@@ -41,7 +41,7 @@ class Controller(private val input: Input, private val simulation: Simulation, p
         renderer.setPan(input.mouseLeftClickDelta)
     }
 
-    fun handleLeftMouseClick() {
+    private fun handleLeftMouseClick() {
         val pos: Vector2 = input.currentMousePosition
         var track = false
         synchronized(simulation.tank!!) {
@@ -62,7 +62,7 @@ class Controller(private val input: Input, private val simulation: Simulation, p
         if (!track) renderer.track(null)
     }
 
-    fun handleRightMouseClick() {
+    private fun handleRightMouseClick() {
         val pos: Vector2 = input.currentMousePosition
         val tank = simulation.tank
         val r = renderer.toRenderSpace(tank!!.radius / 25f)

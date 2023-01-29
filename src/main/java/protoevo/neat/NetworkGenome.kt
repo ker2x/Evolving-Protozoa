@@ -15,7 +15,7 @@ class NetworkGenome : Serializable {
     private lateinit var outputNeuronGenes: Array<NeuronGene?>
     private lateinit var hiddenNeuronGenes: Array<NeuronGene?>
     private var nNeuronGenes = 0
-    lateinit var synapseGenes: Array<SynapseGene?>
+    private lateinit var synapseGenes: Array<SynapseGene?>
         private set
     private var random = Simulation.RANDOM
     private var mutationChance = Settings.globalMutationChance
@@ -30,7 +30,7 @@ class NetworkGenome : Serializable {
         setProperties(other)
     }
 
-    fun setProperties(other: NetworkGenome) {
+    private fun setProperties(other: NetworkGenome) {
         sensorNeuronGenes = other.sensorNeuronGenes
         outputNeuronGenes = other.outputNeuronGenes
         hiddenNeuronGenes = other.hiddenNeuronGenes
@@ -274,7 +274,7 @@ class NetworkGenome : Serializable {
         return nSensors
     }
 
-    fun hasSensor(label: String): Boolean {
+    private fun hasSensor(label: String): Boolean {
         for (gene in sensorNeuronGenes) if (gene!!.label == label) return true
         return false
     }

@@ -324,7 +324,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         return localgrowthRate
     }
 */
-    fun age(delta: Float) {
+private fun age(delta: Float) {
         deathRate = getRadius() * delta * Settings.protozoaStarvationFactor
         //		deathRate *= 0.75f + 0.25f * getSpeed();
         deathRate *= Settings.spikeDeathRatePenalty.pow(spikes.size)

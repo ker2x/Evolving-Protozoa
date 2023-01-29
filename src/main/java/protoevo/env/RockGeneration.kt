@@ -92,13 +92,13 @@ object RockGeneration {
         }
     }
 
-    fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?): Rock? {
+    private fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?): Rock? {
         val sizeRange = Settings.maxRockSize - Settings.minRockSize
         val rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat()
         return newAttachedRock(toAttach, edgeIdx, rocks, rockSize)
     }
 
-    fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?, rockSize: Float): Rock? {
+    private fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?, rockSize: Float): Rock? {
         val edge = toAttach!!.getEdge(edgeIdx)
         val normal = toAttach.normals[edgeIdx]
         val p1 = edge[0]
@@ -151,19 +151,19 @@ object RockGeneration {
         return true
     }
 
-    fun newRock(tank: Tank): Rock {
+    private fun newRock(tank: Tank): Rock {
         val centreR = tank.radius * Simulation.RANDOM.nextFloat()
         val centreT = (2 * Math.PI * Simulation.RANDOM.nextFloat()).toFloat()
         val centre = fromAngle(centreT).setLength(centreR)
         return newRockAt(centre)
     }
 
-    fun newRockAt(centre: Vector2): Rock {
+    private fun newRockAt(centre: Vector2): Rock {
         val dir = fromAngle((2 * Math.PI * Simulation.RANDOM.nextFloat()).toFloat())
         return newRockAt(centre, dir)
     }
 
-    fun newRockAt(centre: Vector2, dir: Vector2): Rock {
+    private fun newRockAt(centre: Vector2, dir: Vector2): Rock {
         var dir = dir
         val sizeRange = Settings.maxRockSize - Settings.minRockSize
         val rockSize = Settings.minRockSize + sizeRange * Simulation.RANDOM.nextFloat()

@@ -11,12 +11,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 class ChunkManager(
-    val xMin: Float, val xMax: Float,
-    val yMin: Float, val yMax: Float,
+    private val xMin: Float, private val xMax: Float,
+    private val yMin: Float, private val yMax: Float,
     val chunkSize: Float
 ) : Serializable {
-    val nYChunks: Int
-    val nXChunks: Int
+    private val nYChunks: Int
+    private val nXChunks: Int
     val chunks: Array<Chunk?>
     private val entities: MutableList<Cell> = ArrayList()
 
@@ -27,7 +27,7 @@ class ChunkManager(
         for (i in 0 until nXChunks) for (j in 0 until nYChunks) chunks[toChunkID(i, j)] = Chunk(i, j, this)
     }
 
-    fun <T : Collidable?> broadScan(
+    private fun <T : Collidable?> broadScan(
         pos: Vector2,
         range: Float,
         scanner: Function<Chunk?, Iterator<T>?>
@@ -56,25 +56,25 @@ class ChunkManager(
         return broadScan(pos, range) { chunk: Chunk? -> chunk!!.cells.iterator() }
     }
 
-    fun toChunkX(tankX: Float): Int {
+    private fun toChunkX(tankX: Float): Int {
         val i = (1 + (tankX - xMin) / chunkSize).toInt()
         if (i < 0) return 0
         return if (i >= nXChunks) nXChunks - 1 else i
     }
 
-    fun toChunkY(tankY: Float): Int {
+    private fun toChunkY(tankY: Float): Int {
         val j = (1 + (tankY - yMin) / chunkSize).toInt()
         if (j < 0) return 0
         return if (j >= nYChunks) nYChunks - 1 else j
     }
 
-    fun toChunkID(i: Int, j: Int): Int {
+    private fun toChunkID(i: Int, j: Int): Int {
         val id = i + j * nYChunks
         if (id < 0) return 0
         return if (id >= nXChunks * nYChunks) nXChunks * nYChunks - 1 else id % (nXChunks * nYChunks)
     }
 
-    fun toChunkID(x: Float, y: Float): Int {
+    private fun toChunkID(x: Float, y: Float): Int {
         val i = (1 + (x - xMin) / chunkSize).toInt()
         val j = (1 + (y - yMin) / chunkSize).toInt()
         return toChunkID(i, j)
@@ -86,20 +86,20 @@ class ChunkManager(
         return Vector2(x, y)
     }
 
-    fun getChunk(e: Cell): Chunk? {
+    private fun getChunk(e: Cell): Chunk? {
         return getChunk(e.pos)
     }
 
-    fun getChunk(pos: Vector2?): Chunk? {
+    private fun getChunk(pos: Vector2?): Chunk? {
         val chunkID = this.toChunkID(pos!!.x, pos.y)
         return getChunk(chunkID)
     }
 
-    fun getChunk(chunkID: Int): Chunk? {
+    private fun getChunk(chunkID: Int): Chunk? {
         return chunks[chunkID]
     }
 
-    fun allocateToChunk(e: Cell) {
+    private fun allocateToChunk(e: Cell) {
         val chunk = getChunk(e)
         chunk!!.addEntity(e)
     }

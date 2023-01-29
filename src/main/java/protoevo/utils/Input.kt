@@ -38,7 +38,7 @@ class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, Mo
         return keys[key]
     }
 
-    fun getMouse(button: Int): Boolean {
+    private fun getMouse(button: Int): Boolean {
         return mouseButtons[button]
     }
 

@@ -59,7 +59,7 @@ class Settings {
     var max_meat = 0
 
     companion object {
-        fun loadSettingsYAML(): Settings {
+        private fun loadSettingsYAML(): Settings {
             val inputStream: InputStream
             inputStream = try {
                 println("Loading settings from " + Simulation.settingsPath)

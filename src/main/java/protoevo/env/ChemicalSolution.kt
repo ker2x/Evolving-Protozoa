@@ -51,7 +51,7 @@ class ChemicalSolution(
         return if (j >= nYChunks) nYChunks - 1 else j
     }
 
-    fun depositChemicals(delta: Float, e: Cell) {
+    private fun depositChemicals(delta: Float, e: Cell) {
         if (e is PlantCell && !e.isDead()) {
             val i = toChemicalGridX(e.pos!!.x)
             val j = toChemicalGridY(e.pos!!.y)

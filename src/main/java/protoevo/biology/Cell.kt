@@ -32,7 +32,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     var _health = 1f
     open var growthRate = 0.0f
         get() = if (recentRigidCollisions > 2) 0f else field
-    var energyAvailable = Settings.startingAvailableCellEnergy
+    private var energyAvailable = Settings.startingAvailableCellEnergy
     var constructionMassAvailable = 0f
         private set
     private var wasteMass = 0f
@@ -75,7 +75,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         for (binding in cellBindings) handleBindingInteraction(binding, delta)
     }
 
-    fun progressConstructionProjects(delta: Float) {
+    private fun progressConstructionProjects(delta: Float) {
         for (project in constructionProjects) {
             if (project.notFinished() && project.canMakeProgress(
                     energyAvailable,
@@ -95,7 +95,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun resourceProduction(delta: Float) {
+    private fun resourceProduction(delta: Float) {
         for (molecule in complexMoleculeProductionRates.keys) {
             val producedMass = delta * complexMoleculeProductionRates.getOrDefault(molecule, 0f)
             val requiredEnergy = molecule.productionCost * producedMass
@@ -117,7 +117,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun getDigestionRate(foodType: Food.Type): Float {
+    private fun getDigestionRate(foodType: Food.Type): Float {
         return foodDigestionRates.getOrDefault(foodType, 0f)
     }
 
@@ -142,7 +142,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         foodToDigest[foodType] = food
     }
 
-    fun digest(delta: Float) {
+    private fun digest(delta: Float) {
         for (food in foodToDigest.values) {
             val rate = delta * 2f * getDigestionRate(food.type)
             if (food.simpleMass > 0) {
@@ -161,7 +161,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun repair(delta: Float) {
+    private fun repair(delta: Float) {
         if (!isDead() && getHealth() < 1f && growthRate > 0) {
             val massRequired = _mass * 0.01f * delta
             val energyRequired = massRequired * 3f
@@ -173,7 +173,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun detachCondition(binding: CellBinding): Boolean {
+    private fun detachCondition(binding: CellBinding): Boolean {
         val e = binding.destinationEntity
         if (e.isDead()) return true
         val dist = e.pos!!.sub(pos!!).len()
@@ -195,7 +195,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         grow(delta)
     }
 
-    fun grow(delta: Float) {
+    private fun grow(delta: Float) {
         val gr = growthRate
         val newR = super.getRadius() * (1 + gr * delta)
         val massChange = getMass(newR) - getMass(super.getRadius())
@@ -240,7 +240,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun handleBindingInteraction(binding: CellBinding, delta: Float) {
+    private fun handleBindingInteraction(binding: CellBinding, delta: Float) {
         val junctionType = binding.cam.junctionType
         if (junctionType == CAMJunctionType.OCCLUDING) handleOcclusionBindingInteraction(
             binding,
@@ -251,8 +251,8 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         ) else if (junctionType == CAMJunctionType.SIGNAL_RELAYING) handleSignallingBindingInteraction(binding, delta)
     }
 
-    fun handleOcclusionBindingInteraction(binding: CellBinding?, delta: Float) {}
-    fun handleChannelBindingInteraction(binding: CellBinding, delta: Float) {
+    private fun handleOcclusionBindingInteraction(binding: CellBinding?, delta: Float) {}
+    private fun handleChannelBindingInteraction(binding: CellBinding, delta: Float) {
         val other = binding.destinationEntity
         val transferRate = Settings.channelBindingEnergyTransport
         val massDelta = constructionMassAvailable - other.constructionMassAvailable
@@ -287,7 +287,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun handleSignallingBindingInteraction(binding: CellBinding?, delta: Float) {}
+    private fun handleSignallingBindingInteraction(binding: CellBinding?, delta: Float) {}
     fun isAttached(e: Cell): Boolean {
         for (binding in cellBindings) if (binding.destinationEntity == e) return true
         return false
@@ -334,7 +334,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
             stats["Growth Rate"] = Settings.statsDistanceScalar * gr
             for (molecule in availableComplexMolecules.keys) if (availableComplexMolecules[molecule]!! > 0) stats["$molecule Available"] =
                 availableComplexMolecules[molecule]
-            if (cellBindings.size > 0) stats["Num Cell Bindings"] = cellBindings.size.toFloat()
+            if (cellBindings.isNotEmpty()) stats["Num Cell Bindings"] = cellBindings.size.toFloat()
             for (junctionType in CAMJunctionType.values()) {
 //			int count = 0;
 //			for (CellAdhesion.CellBinding binding : cellBindings)
@@ -372,7 +372,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         return dead || _health < 0.05f
     }
 
-    fun killCell() {
+    private fun killCell() {
         dead = true
         _health = 0f
     }
@@ -391,7 +391,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         this.fullyDegradedColour = fullyDegradedColour
     }
 
-    fun getFullyDegradedColour(): Color {
+    private fun getFullyDegradedColour(): Color {
         if (fullyDegradedColour == null) {
             val healthyColour = healthyColour
             val r = healthyColour.red
@@ -455,7 +455,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         }
     }
 
-    fun setFoodToDigest(foodType: Food.Type, food: Food) {
+    private fun setFoodToDigest(foodType: Food.Type, food: Food) {
         foodToDigest[foodType] = food
     }
 
@@ -463,11 +463,11 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         return children
     }
 
-    fun getCAMAvailable(cam: CellAdhesionMolecule): Float {
+    private fun getCAMAvailable(cam: CellAdhesionMolecule): Float {
         return surfaceCAMs.getOrDefault(cam, 0f)
     }
 
-    fun setCAMAvailable(cam: CellAdhesionMolecule, amount: Float) {
+    private fun setCAMAvailable(cam: CellAdhesionMolecule, amount: Float) {
         surfaceCAMs[cam] = amount
     }
 
@@ -508,7 +508,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     private val complexMoleculeMassCap: Float
         private get() = getMass(getRadius() * 0.1f)
 
-    fun setComplexMoleculeAvailable(molecule: ComplexMolecule, amount: Float) {
+    private fun setComplexMoleculeAvailable(molecule: ComplexMolecule, amount: Float) {
         availableComplexMolecules[molecule] = max(0f, amount)
         _mass = computeMass()
     }
@@ -516,7 +516,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     val constructionMassCap: Float
         get() = 2 * massDensity * getSphereVolume(getRadius() * 0.25f)
 
-    fun setAvailableConstructionMass(mass: Float) {
+    private fun setAvailableConstructionMass(mass: Float) {
         constructionMassAvailable = min(mass, constructionMassCap)
         this._mass = computeMass()
     }
@@ -525,7 +525,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         setAvailableConstructionMass(constructionMassAvailable + mass)
     }
 
-    fun useConstructionMass(mass: Float) {
+    private fun useConstructionMass(mass: Float) {
         constructionMassAvailable = max(0f, constructionMassAvailable - mass)
     }
 
@@ -542,7 +542,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         return _mass
     }
 
-    fun computeMass(): Float {
+    private fun computeMass(): Float {
         var extraMass = constructionMassAvailable + wasteMass
         for (m in availableComplexMolecules.values) extraMass += m
         return getMass(getRadius(), extraMass)

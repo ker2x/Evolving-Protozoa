@@ -4,7 +4,7 @@ import java.awt.*
 import java.awt.font.FontRenderContext
 
 class TextObject(var text: String?, private var m_font: String?, var size: Int, var position: Vector2) {
-    var style: Int
+    private var style: Int
     var color: Color?
 
     constructor(text: String?, size: Int) : this(text, TextStyle.fontName, size, Vector2(0f, 0f))

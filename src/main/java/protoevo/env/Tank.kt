@@ -96,7 +96,7 @@ class Tank : Iterable<Cell?>, Serializable {
         }
     }
 
-    fun writeGenomeHeaders() {
+    private fun writeGenomeHeaders() {
         val protozoan = chunkManager.allCells
             .stream()
             .filter { cell: Cell? -> cell is Protozoan }
@@ -113,7 +113,7 @@ class Tank : Iterable<Cell?>, Serializable {
         return hasInitialised
     }
 
-    fun initialisePopulation(clusterCentres: Array<Vector2?>?) {
+    private fun initialisePopulation(clusterCentres: Array<Vector2?>?) {
         var findPlantPosition = Function { entityRadius: Float -> this.randomPosition(entityRadius) }
         var findProtozoaPosition = Function { entityRadius: Float -> this.randomPosition(entityRadius) }
         if (clusterCentres != null) {
@@ -130,13 +130,13 @@ class Tank : Iterable<Cell?>, Serializable {
         }
     }
 
-    fun initialisePopulation() {
+    private fun initialisePopulation() {
         val clusterCentres = arrayOfNulls<Vector2>(Settings.numPopulationClusters)
         for (i in clusterCentres.indices) clusterCentres[i] = randomPosition(Settings.populationClusterRadius)
         initialisePopulation(clusterCentres)
     }
 
-    fun randomPosition(entityRadius: Float, clusterCentres: Array<Vector2?>): Vector2 {
+    private fun randomPosition(entityRadius: Float, clusterCentres: Array<Vector2?>): Vector2 {
         val clusterIdx = Simulation.RANDOM.nextInt(clusterCentres.size)
         val clusterCentre = clusterCentres[clusterIdx]
         return randomPosition(entityRadius, clusterCentre, Settings.populationClusterRadius)
@@ -152,7 +152,7 @@ class Tank : Iterable<Cell?>, Serializable {
         )
     }
 
-    fun handleTankEdge(e: Cell) {
+    private fun handleTankEdge(e: Cell) {
         val rPos = e.pos!!.len()
         if (Settings.sphericalTank && rPos - e.getRadius() > radius) e.pos!!.setLength(-0.98f * radius) else if (rPos + e.getRadius() > radius) {
             e.pos!!.setLength(radius - e.getRadius())
@@ -161,7 +161,7 @@ class Tank : Iterable<Cell?>, Serializable {
         }
     }
 
-    fun updateCell(e: Cell, delta: Float) {
+    private fun updateCell(e: Cell, delta: Float) {
         e.handleInteractions(delta)
         e.update(delta)
         handleTankEdge(e)
@@ -242,7 +242,7 @@ class Tank : Iterable<Cell?>, Serializable {
 
     val stats: Map<String, Float>
         get() = getStats(false)
-    val protozoaStats: Map<String, Float>
+    private val protozoaStats: Map<String, Float>
         get() {
             val stats: MutableMap<String, Float> = TreeMap()
             val protozoa: Collection<Protozoan> = chunkManager.allCells
@@ -285,13 +285,13 @@ class Tank : Iterable<Cell?>, Serializable {
         return chunkManager.allCells.iterator()
     }
 
-    fun isCollidingWithAnything(e: Cell): Boolean {
+    private fun isCollidingWithAnything(e: Cell): Boolean {
         return if (chunkManager.allCells.stream()
                 .anyMatch { other: Cell? -> e.isCollidingWith(other) }
         ) true else rocks.stream().anyMatch { rock: Rock? -> e.isCollidingWith(rock) }
     }
 
-    fun addRandom(e: Cell, findPosition: Function<Float, Vector2>) {
+    private fun addRandom(e: Cell, findPosition: Function<Float, Vector2>) {
         for (i in 0..4) {
             e.pos = findPosition.apply(e.getRadius())
             if (!isCollidingWithAnything(e)) {

@@ -9,13 +9,13 @@ import kotlin.math.tanh
 
 class Chemical : Serializable {
     var currentPlantPheromoneDensity = 0f
-    var nextPlantPheromoneDensity = 0f
+    private var nextPlantPheromoneDensity = 0f
 
     @Transient
     private  var neighbours: Array<out Chemical>? = null
     fun propagate(delta: Float) {
         nextPlantPheromoneDensity = currentPlantPheromoneDensity
-        if (neighbours != null && neighbours!!.size > 0) {
+        if (neighbours != null && neighbours!!.isNotEmpty()) {
             var incoming = 0f
             for (chemical in neighbours!!) incoming += chemical.currentPlantPheromoneDensity
             incoming /= neighbours!!.size.toFloat()

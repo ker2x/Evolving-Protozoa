@@ -168,7 +168,7 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
             return 0f < t1 && t1 < 1f && 0f < t2 && t2 < 1f
         }
 
-        fun edgesIntersect(start1: Vector2?, dir1: Vector2, start2: Vector2?, dir2: Vector2): Boolean {
+        private fun edgesIntersect(start1: Vector2?, dir1: Vector2, start2: Vector2?, dir2: Vector2): Boolean {
             val coefs = edgesIntersectCoef(start1, dir1, start2, dir2, FloatArray(2)) ?: return false
             return edgeIntersectCondition(coefs)
         }

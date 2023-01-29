@@ -17,7 +17,7 @@ import kotlin.math.sin
 
 class Renderer(private val simulation: Simulation, private val window: Window) : Canvas() {
     var time = 0f
-    val tankViewCentre: Vector2
+    private val tankViewCentre: Vector2
     private val tankRenderRadius: Float
     private var pan: Vector2
     private var panPosTemp: Vector2
@@ -28,7 +28,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
     private val zoomSlowness = 8.0
     private var superSimpleRender = false
     private var renderChemicals = true
-    var isAdvancedDebugInfo = false
+    private var isAdvancedDebugInfo = false
         private set
     private val rotate = 0f
     private var lastFPSTime = 0.0
@@ -134,7 +134,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         }
     }
 
-    fun protozoa(g: Graphics2D, p: Protozoan) {
+    private fun protozoa(g: Graphics2D, p: Protozoan) {
         val pos = toRenderSpace(p.pos)
         val r: Float = toRenderSpace(p.getRadius()).toFloat()
         if (circleNotVisible(pos, r)) return
@@ -186,7 +186,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         }
     }
 
-    fun circleNotVisible(pos: Vector2, r: Float): Boolean {
+    private fun circleNotVisible(pos: Vector2, r: Float): Boolean {
         return pos.x - r > window.width || pos.x + r < 0 || pos.y - r > window.height || pos.y + r < 0
     }
 
@@ -203,7 +203,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         g.stroke = s
     }
 
-    fun fillCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color?) {
+    private fun fillCircle(g: Graphics2D, pos: Vector2, r: Float, c: Color?) {
         g.color = c
         g.fillOval((pos.x - r).toInt(), (pos.y - r).toInt(), (2 * r).toInt(), (2 * r).toInt())
     }
@@ -237,22 +237,22 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         drawOutlinedCircle(g, pos, r, c, edgeColour)
     }
 
-    fun pellet(g: Graphics2D, p: EdibleCell) {
+    private fun pellet(g: Graphics2D, p: EdibleCell) {
         val pos = toRenderSpace(p.pos)
         val r: Float = toRenderSpace(p.getRadius()).toFloat()
         drawOutlinedCircle(g, pos, r, p.getColor()!!)
         if (simulation.inDebugMode()) stats["Pellets Rendered"] = stats["Pellets Rendered"]!! + 1
     }
 
-    fun renderEntity(g: Graphics2D, e: Cell?) {
+    private fun renderEntity(g: Graphics2D, e: Cell?) {
         if (e is Protozoan) protozoa(g, e) else if (e is EdibleCell) pellet(g, e)
     }
 
-    fun pointOnScreen(x: Int, y: Int): Boolean {
+    private fun pointOnScreen(x: Int, y: Int): Boolean {
         return 0 <= x && x <= window.width && 0 <= y && y <= window.height
     }
 
-    fun squareInView(origin: Vector2, size: Int): Boolean {
+    private fun squareInView(origin: Vector2, size: Int): Boolean {
         val originX = origin.x.toInt()
         val originY = origin.y.toInt()
         return pointOnScreen(originX, originY) ||
@@ -261,20 +261,20 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 pointOnScreen(originX + size, originY + size)
     }
 
-    fun chunkInView(chunk: Chunk): Boolean {
+    private fun chunkInView(chunk: Chunk): Boolean {
         val chunkCoords = toRenderSpace(chunk.tankCoords)
         val chunkSize = toRenderSpace(simulation.tank!!.chunkManager.chunkSize)
         return squareInView(chunkCoords, chunkSize)
     }
 
-    fun renderChunk(g: Graphics2D, chunk: Chunk) {
+    private fun renderChunk(g: Graphics2D, chunk: Chunk) {
         if (chunkInView(chunk)) {
             if (simulation.inDebugMode()) stats["Chunks Rendered"] = stats["Chunks Rendered"]!! + 1
             for (e in chunk.cells) renderEntity(g, e)
         }
     }
 
-    fun renderEntityAttachments(g: Graphics2D, e: Cell) {
+    private fun renderEntityAttachments(g: Graphics2D, e: Cell) {
         val r1: Float = toRenderSpace(e.getRadius()).toFloat()
         val ePos = toRenderSpace(e.pos)
         if (circleNotVisible(ePos, r1) || e.cellBindings.isEmpty()) return
@@ -337,7 +337,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         }
     }
 
-    fun rocks(g: Graphics2D, tank: Tank?) {
+    private fun rocks(g: Graphics2D, tank: Tank?) {
         val screenPoints = arrayOfNulls<Vector2>(3)
         val xPoints = IntArray(screenPoints.size)
         val yPoints = IntArray(screenPoints.size)
@@ -391,7 +391,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         }
     }
 
-    fun drawCollisionBounds(g: Graphics2D, collidable: Collidable?, color: Color?) {
+    private fun drawCollisionBounds(g: Graphics2D, collidable: Collidable?, color: Color?) {
         if (collidable is Cell) {
             drawCollisionBounds(g, collidable, collidable.getRadius(), color)
         } else if (collidable is Rock) {
@@ -399,7 +399,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         }
     }
 
-    fun drawCollisionBounds(g: Graphics2D, rock: Rock, color: Color?) {
+    private fun drawCollisionBounds(g: Graphics2D, rock: Rock, color: Color?) {
         val screenPoints = arrayOf(
             toRenderSpace(rock.points[0]),
             toRenderSpace(rock.points[1]),
@@ -423,14 +423,14 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         g.stroke = s
     }
 
-    fun drawCollisionBounds(g: Graphics2D, e: Cell, r: Float, color: Color?) {
+    private fun drawCollisionBounds(g: Graphics2D, e: Cell, r: Float, color: Color?) {
         var r = r
         val pos = toRenderSpace(e.pos)
         r = toRenderSpace(r).toFloat()
         if (!circleNotVisible(pos, r)) drawCircle(g, pos, r, color, window.height / 500)
     }
 
-    fun maskTank(g: Graphics, coords: Vector2, r: Float, alpha: Int) {
+    private fun maskTank(g: Graphics, coords: Vector2, r: Float, alpha: Int) {
         val n = microscopePolygonNPoints - 7
         for (i in 0 until n) {
             val t = (2 * Math.PI * i / n.toFloat()).toFloat()
@@ -455,7 +455,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         g.fillPolygon(microscopePolygonXPoints, microscopePolygonYPoints, microscopePolygonNPoints)
     }
 
-    fun background(graphics: Graphics2D) {
+    private fun background(graphics: Graphics2D) {
         time += 0.1.toFloat()
         val backgroundR = 25 + (5 * cos(time / 100.0)).toInt()
         val backgroundG = 40 + (30 * sin(time / 100.0)).toInt()
@@ -605,7 +605,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         pan = panPosTemp.add(delta!!)
     }
 
-    fun updatePanTemp() {
+    private fun updatePanTemp() {
         panPosTemp = pan
     }
 

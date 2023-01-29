@@ -18,7 +18,7 @@ class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, Actio
 	val input: Input
     private val renderer: Renderer
     private val simulation: Simulation
-    val controller: Controller
+    private val controller: Controller
     private val width: Int
     private val height: Int
     private val timer = Timer(Application.refreshDelay.toInt(), this)

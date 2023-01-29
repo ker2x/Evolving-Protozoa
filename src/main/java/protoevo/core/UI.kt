@@ -84,11 +84,11 @@ class UI(private val window: Window, private val simulation: Simulation, private
         framesPerSecond.paintLabels = true
     }
 
-    fun getYPosLHS(i: Int): Float {
+    private fun getYPosLHS(i: Int): Float {
         return 1.3f * infoTextSize * i + 3 * window.height / 20f
     }
 
-    fun getYPosRHS(i: Int): Float {
+    private fun getYPosRHS(i: Int): Float {
         return 1.3f * infoTextSize * i + window.height / 20f
     }
 

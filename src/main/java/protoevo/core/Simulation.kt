@@ -106,17 +106,17 @@ class Simulation {
         }
     }
 
-    fun newDefaultTank() {
+    private fun newDefaultTank() {
         tank = Tank()
         loadSettings()
         tank!!.setGenomeFile(genomeFile)
     }
 
-    fun setupTank() {
+    private fun setupTank() {
         tank!!.initialise()
     }
 
-    fun loadTank(filename: String) {
+    private fun loadTank(filename: String) {
         try {
             tank = load(filename) as Tank
             println("Loaded tank at: $filename")
@@ -129,7 +129,7 @@ class Simulation {
         }
     }
 
-    fun loadMostRecentTank() {
+    private fun loadMostRecentTank() {
         val dir = Paths.get("saves/$name/tank")
         if (Files.exists(dir)) try {
             Files.list(dir).use { pathStream ->
@@ -193,13 +193,13 @@ class Simulation {
         saveTank()
     }
 
-    fun saveTank() {
+    private fun saveTank() {
         val timeStamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Date())
         val fileName = "saves/$name/tank/$timeStamp"
         save(tank, fileName)
     }
 
-    fun makeHistorySnapshot() {
+    private fun makeHistorySnapshot() {
         val stats = tank!!.getStats(true)
         if (statsNames == null) {
             statsNames = ArrayList(tank!!.getStats(true).keys)
