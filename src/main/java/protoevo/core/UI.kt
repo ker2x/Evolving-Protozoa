@@ -138,7 +138,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
             statsTitle.color = Color.WHITE.darker()
             statsTitle.render(g)
             lineNumber++
-            renderStats(g, lineNumber++, tracked!!.getStats()!!)
+            renderStats(g, lineNumber++, tracked.getStats()!!)
             if (tracked is Protozoan && tracked.brain is NNBrain) {
                 val brain = tracked.brain as NNBrain
                 renderBrainNetwork(brain.network, g)

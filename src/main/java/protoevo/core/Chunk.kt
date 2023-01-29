@@ -53,6 +53,15 @@ class Chunk(private val x: Int, private val y: Int, private val chunkManager: Ch
         return rocks
     }
 
+    override fun hashCode(): Int {
+        var result = x
+        result = 31 * result + y
+        result = 31 * result + chunkManager.hashCode()
+        result = 31 * result + entities.hashCode()
+        result = 31 * result + rocks.hashCode()
+        return result
+    }
+
     companion object {
         const val serialVersionUID = 4697424153087580763L
     }

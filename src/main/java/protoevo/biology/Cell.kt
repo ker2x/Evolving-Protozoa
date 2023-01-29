@@ -419,11 +419,11 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
             val dir = Vector2(Math.cos(angle.toDouble()).toFloat(), Math.sin(angle.toDouble()).toFloat())
             val p = (0.3 + 0.7 * Simulation.RANDOM.nextDouble() / nChildren).toFloat()
             val nEntities: Int = tank.cellCounts.getOrDefault(type!!, 0)
-            val maxEntities: Int = tank.cellCapacities.getOrDefault(type!!, 0)
+            val maxEntities: Int = tank.cellCapacities.getOrDefault(type, 0)
             if (nEntities > maxEntities) return
             try {
                 val child = createChild.apply(getRadius() * p)
-                child!!.pos = pos!!.add(dir.mul(2 * child.getRadius()))
+                child.pos = pos!!.add(dir.mul(2 * child.getRadius()))
                 child.generation = generation + 1
                 allocateChildResources(child, p)
                 for (otherChild in children) child.handlePotentialCollision(otherChild, 0f)

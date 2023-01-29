@@ -247,7 +247,7 @@ class Tank : Iterable<Cell?>, Serializable {
                 .map { cell: Cell -> cell as Protozoan }
                 .collect(Collectors.toSet())
             for (e in protozoa) {
-                for ((key1, value) in e!!.getStats()!!) {
+                for ((key1, value) in e.getStats()) {
                     val key = "Sum $key1"
                     val currentValue = stats.getOrDefault(key, 0f)
                     stats[key] = value!! + currentValue
@@ -255,7 +255,7 @@ class Tank : Iterable<Cell?>, Serializable {
             }
             val numProtozoa = protozoa.size
             for (e in protozoa) {
-                for ((key, value) in e!!.getStats()!!) {
+                for ((key, value) in e.getStats()) {
                     val sumValue = stats.getOrDefault("Sum $key", 0f)
                     val mean = sumValue / numProtozoa
                     stats["Mean $key"] = mean
