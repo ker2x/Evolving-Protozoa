@@ -13,12 +13,15 @@ import java.io.Serializable
 import kotlin.math.sqrt
 
 open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
+
     @JvmField
     var pos: Vector2? = null
+
     private var prevPos: Vector2? = null
     private var vel: Vector2? = null
     private val acc = Vector2(0f, 0f)
     private var radius = 0f
+
     var recentRigidCollisions = 0
         private set
 
@@ -133,6 +136,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     }
 
     private fun onRockCollisionCallback(rock: Rock?, delta: Float) {}
+
     open fun handlePotentialCollision(rock: Rock, delta: Float): Boolean {
         val edges = rock.edges
         val pos = pos
@@ -163,7 +167,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         return false
     }
 
-    fun isCollidingWith(rock: Rock): Boolean {
+    private fun isCollidingWith(rock: Rock): Boolean {
         val edges = rock.edges
         val r = getRadius()
         val pos = pos
@@ -174,7 +178,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         return false
     }
 
-    fun isCollidingWith(other: Particle): Boolean {
+    private fun isCollidingWith(other: Particle): Boolean {
         if (other === this) return false
         val r = getRadius() + other.getRadius()
         return other.pos!!.squareDistanceTo(pos!!) < r * r
@@ -186,8 +190,10 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
 
     val speed: Float
         get() = if (vel == null) 0f else vel!!.len()
+
     open val mass: Float
         get() = getMass(getRadius())
+
 
     fun getMass(r: Float): Float {
         return getMass(r, 0f)
