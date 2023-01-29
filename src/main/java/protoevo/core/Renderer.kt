@@ -100,7 +100,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 t += dt
             }
         }
-        g.color = c!!.darker()
+        g.color = c.darker()
         g.fillArc(
             (pos.x - 0.8 * r).toInt(),
             (pos.y - 0.8 * r).toInt(),
@@ -277,8 +277,8 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         if (circleNotVisible(ePos, r1) || e.cellBindings.isEmpty()) return
         val eColor = e.getColor()
         val red = eColor!!.red
-        val green = eColor!!.green
-        val blue = eColor!!.blue
+        val green = eColor.green
+        val blue = eColor.blue
         for (binding in e.cellBindings) {
             val attached = binding.destinationEntity
             val r2: Float = toRenderSpace(attached.radius).toFloat()
@@ -289,8 +289,8 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
             val attachedColor = attached.getColor()
             g.color = Color(
                 (red + attachedColor!!.red) / 2,
-                (green + attachedColor!!.green) / 2,
-                (blue + attachedColor!!.blue) / 2
+                (green + attachedColor.green) / 2,
+                (blue + attachedColor.blue) / 2
             ).brighter()
             g.drawLine(ePos.x.toInt(), ePos.y.toInt(), attachedPos.x.toInt(), attachedPos.y.toInt())
             g.stroke = s
@@ -314,7 +314,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 val p = tracked as Protozoan
                 drawCollisionBounds(g, tracked as Protozoan, p.interactRange, Color.WHITE.darker())
                 val interactCells = chunkManager.broadEntityDetection(
-                    (tracked as Protozoan)!!.pos!!, p.interactRange
+                    (tracked as Protozoan).pos!!, p.interactRange
                 )
                 while (interactCells.hasNext()) {
                     val cell = interactCells.next()
@@ -340,14 +340,14 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         val yPoints = IntArray(screenPoints.size)
         for (rock in tank!!.rocks) {
             screenPoints[0] = toRenderSpace(rock!!.points[0])
-            screenPoints[1] = toRenderSpace(rock!!.points[1])
-            screenPoints[2] = toRenderSpace(rock!!.points[2])
+            screenPoints[1] = toRenderSpace(rock.points[1])
+            screenPoints[2] = toRenderSpace(rock.points[2])
             for (i in screenPoints.indices) xPoints[i] = screenPoints[i]!!.x.toInt()
             for (i in screenPoints.indices) yPoints[i] = screenPoints[i]!!.y.toInt()
             val color = Color(
-                rock!!.getColor()!!.red,
-                rock!!.getColor()!!.green,
-                rock!!.getColor()!!.blue,
+                rock.getColor()!!.red,
+                rock.getColor()!!.green,
+                rock.getColor()!!.blue,
                 if (simulation.inDebugMode()) 100 else 255
             )
             g.color = color

@@ -10,6 +10,7 @@ import protoevo.utils.Geometry.lineIntersectCondition
 import protoevo.utils.Vector2
 import java.awt.Color
 import java.io.Serializable
+import kotlin.math.sqrt
 
 open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     @JvmField
@@ -88,8 +89,8 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         val d = b * b - 4 * a * c
         val doesIntersect = d != 0f
         if (!doesIntersect) return
-        val l1 = ((-b + Math.sqrt(d.toDouble())) / (2 * a)).toFloat()
-        val l2 = ((-b - Math.sqrt(d.toDouble())) / (2 * a)).toFloat()
+        val l1 = ((-b + sqrt(d.toDouble())) / (2 * a)).toFloat()
+        val l2 = ((-b - sqrt(d.toDouble())) / (2 * a)).toFloat()
         if (l1 > 0) {
             collisions[0].collided = true
             collisions[0].point.set(start).translate(ray.x * l1, ray.y * l1)
@@ -163,12 +164,12 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     }
 
     fun isCollidingWith(rock: Rock): Boolean {
-        val edges = rock!!.edges!!
+        val edges = rock.edges
         val r = getRadius()
         val pos = pos
         if (rock.pointInside(pos!!)) return true
         for (edge in edges) {
-            if (doesLineIntersectCircle(edge, pos!!, r)) return true
+            if (doesLineIntersectCircle(edge, pos, r)) return true
         }
         return false
     }

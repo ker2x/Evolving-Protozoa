@@ -278,7 +278,7 @@ class Tank : Iterable<Cell?>, Serializable {
     }
 
     override fun iterator(): Iterator<Cell> {
-        return chunkManager!!.allCells!!.iterator()
+        return chunkManager.allCells.iterator()
     }
 
     fun isCollidingWithAnything(e: Cell): Boolean {

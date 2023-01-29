@@ -123,7 +123,7 @@ class ChunkManager(
         for (p in rock.points) {
             val chunk = getChunk(p)
             val i = chunk!!.chunkCoords.x.toInt()
-            val j = chunk!!.chunkCoords.y.toInt()
+            val j = chunk.chunkCoords.y.toInt()
             iMax = Math.max(i, iMax)
             iMin = Math.min(i, iMin)
             jMax = Math.max(j, jMax)

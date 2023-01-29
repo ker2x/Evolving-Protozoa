@@ -99,7 +99,7 @@ object RockGeneration {
     fun newAttachedRock(toAttach: Rock?, edgeIdx: Int, rocks: List<Rock?>?, rockSize: Float): Rock? {
         val edge = toAttach!!.getEdge(edgeIdx)
         val normal = toAttach.normals[edgeIdx]
-        val p1 = edge!![0]
+        val p1 = edge[0]
         val p2 = edge[1]
         val p3 = p1!!.add(p2!!).scale(0.5f).translate(normal!!.unit().scale(rockSize))
         val newEdge1 = arrayOf<Vector2?>(p1, p3)

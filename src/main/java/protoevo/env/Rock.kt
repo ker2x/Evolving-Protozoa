@@ -68,8 +68,8 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
 
     override fun pointInside(x: Vector2?): Boolean {
         val d1 = sign(x!!, points[0], points[1])
-        val d2 = sign(x!!, points[1], points[2])
-        val d3 = sign(x!!, points[2], points[0])
+        val d2 = sign(x, points[1], points[2])
+        val d3 = sign(x, points[2], points[0])
         val hasNeg = d1 < 0 || d2 < 0 || d3 < 0
         val hasPos = d1 > 0 || d2 > 0 || d3 > 0
         return !(hasNeg && hasPos)
