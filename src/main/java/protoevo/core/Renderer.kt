@@ -10,6 +10,10 @@ import protoevo.utils.Vector2
 import protoevo.utils.Window
 import java.awt.*
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 
 class Renderer(private val simulation: Simulation, private val window: Window) : Canvas() {
     var time = 0f
@@ -168,8 +172,8 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
                 while (t < 2 * Math.PI) {
                     val percent = 0.1f + 0.2f * random.nextFloat()
                     val radius: Float = toRenderSpace(percent * p.getRadius()).toFloat()
-                    val x = (radius * (0.1 + Math.cos((t + t0).toDouble())) + pos.x).toInt()
-                    val y = (radius * (-0.1 + Math.sin((t + t0).toDouble())) + pos.y).toInt()
+                    val x = (radius * (0.1 + cos((t + t0).toDouble())) + pos.x).toInt()
+                    val y = (radius * (-0.1 + sin((t + t0).toDouble())) + pos.y).toInt()
                     nucleus.addPoint(x, y)
                     t += dt
                 }
@@ -209,7 +213,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
         g.color = c
         if (r <= 3) {
-            val l = Math.max(r.toInt(), 1)
+            val l = max(r.toInt(), 1)
             g.fillRect(
                 (pos.x - l).toInt(), (pos.y - l).toInt(),
                 (2 * l),
@@ -281,7 +285,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         for (binding in e.cellBindings) {
             val attached = binding.destinationEntity
             val r2: Float = toRenderSpace(attached.getRadius()).toFloat()
-            val r = Math.min(r1, r2)
+            val r = min(r1, r2)
             val s = g.stroke
             g.stroke = BasicStroke(1.5f * r)
             val attachedPos = toRenderSpace(attached.pos)
@@ -430,8 +434,8 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
         val n = microscopePolygonNPoints - 7
         for (i in 0 until n) {
             val t = (2 * Math.PI * i / n.toFloat()).toFloat()
-            microscopePolygonXPoints[i] = (coords.x + r * Math.cos(t.toDouble())).toInt()
-            microscopePolygonYPoints[i] = (coords.y + r * Math.sin(t.toDouble())).toInt()
+            microscopePolygonXPoints[i] = (coords.x + r * cos(t.toDouble())).toInt()
+            microscopePolygonYPoints[i] = (coords.y + r * sin(t.toDouble())).toInt()
         }
         microscopePolygonXPoints[n] = coords.x.toInt() + r.toInt()
         microscopePolygonYPoints[n] = coords.y.toInt()
@@ -453,9 +457,9 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
 
     fun background(graphics: Graphics2D) {
         time += 0.1.toFloat()
-        val backgroundR = 25 + (5 * Math.cos(time / 100.0)).toInt()
-        val backgroundG = 40 + (30 * Math.sin(time / 100.0)).toInt()
-        val backgroundB = 35 + (15 * Math.cos(time / 100.0 + 1)).toInt()
+        val backgroundR = 25 + (5 * cos(time / 100.0)).toInt()
+        val backgroundG = 40 + (30 * sin(time / 100.0)).toInt()
+        val backgroundB = 35 + (15 * cos(time / 100.0 + 1)).toInt()
         val backgroundColour = Color(backgroundR, backgroundG, backgroundB)
         graphics.color = backgroundColour
         graphics.fillRect(0, 0, window.width, window.height)

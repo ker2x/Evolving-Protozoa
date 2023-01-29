@@ -6,6 +6,7 @@ import java.awt.FontFormatException
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.io.IOException
+import kotlin.math.pow
 
 class TextStyle {
     var size = 0
@@ -18,9 +19,9 @@ class TextStyle {
         var fontName = "Fira Code Retina"
         @JvmStatic
         fun numberToString(d: Float, dp: Int): String {
-            val ten = Math.pow(10.0, dp.toDouble()).toFloat()
+            val ten = 10.0.pow(dp.toDouble()).toFloat()
             val v = (d * ten).toInt() / ten
-            return if (v.toInt().toFloat() == v) Integer.toString(v.toInt()) else java.lang.Float.toString(v)
+            return if (v.toInt().toFloat() == v) v.toInt().toString() else v.toString()
         }
 
         fun loadFonts() {

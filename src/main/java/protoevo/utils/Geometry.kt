@@ -1,5 +1,7 @@
 package protoevo.utils
 
+import kotlin.math.sqrt
+
 object Geometry {
     @JvmStatic
     fun circleIntersectLineCoefficients(dir: Vector2?, x: Vector2?, r: Float): FloatArray? {
@@ -8,8 +10,8 @@ object Geometry {
         val c = x!!.len2() - r * r
         val disc = b * b - 4 * a * c
         if (disc < 0) return null
-        val t1 = ((-b + Math.sqrt(disc.toDouble())) / (2 * a)).toFloat()
-        val t2 = ((-b - Math.sqrt(disc.toDouble())) / (2 * a)).toFloat()
+        val t1 = ((-b + sqrt(disc.toDouble())) / (2 * a)).toFloat()
+        val t2 = ((-b - sqrt(disc.toDouble())) / (2 * a)).toFloat()
         return floatArrayOf(t1, t2)
     }
 

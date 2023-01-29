@@ -16,6 +16,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.function.Function
 import java.util.stream.Collectors
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.sin
 
 class Tank : Iterable<Cell?>, Serializable {
     @JvmField
@@ -72,7 +76,7 @@ class Tank : Iterable<Cell?>, Serializable {
                     clusterCentres[j] = randomPosition(Settings.populationClusterRadius)
                     val maxR = 5 * (Settings.populationClusterRadius + Settings.populationClusterRadiusRange)
                     val minR =
-                        Math.max(0.1f, 5 * (Settings.populationClusterRadius - Settings.populationClusterRadiusRange))
+                        max(0.1f, 5 * (Settings.populationClusterRadius - Settings.populationClusterRadiusRange))
                     val radius = Simulation.RANDOM.nextFloat() * (maxR - minR) + minR
                     generateRingOfRocks(this, clusterCentres[j], radius, 0.05f)
                 }
@@ -143,7 +147,7 @@ class Tank : Iterable<Cell?>, Serializable {
         val rad = clusterRadius - 4 * entityRadius
         val t = (2 * Math.PI * Simulation.RANDOM.nextDouble()).toFloat()
         val r = 2 * entityRadius + rad * Simulation.RANDOM.nextFloat()
-        return Vector2((r * Math.cos(t.toDouble())).toFloat(), (r * Math.sin(t.toDouble())).toFloat()).add(
+        return Vector2((r * cos(t.toDouble())).toFloat(), (r * sin(t.toDouble())).toFloat()).add(
             centre!!
         )
     }
@@ -203,7 +207,7 @@ class Tank : Iterable<Cell?>, Serializable {
 
     private fun handleNewProtozoa(p: Protozoan) {
         protozoaBorn++
-        generation = Math.max(generation, p.generation.toLong())
+        generation = max(generation, p.generation.toLong())
         if (genomeFile != null && Settings.writeGenomes) {
             val genomeLine = p.generation.toString() + "," + elapsedTime + "," + p.genome.toString()
             genomesToWrite.add(genomeLine)
@@ -260,7 +264,7 @@ class Tank : Iterable<Cell?>, Serializable {
                     val mean = sumValue / numProtozoa
                     stats["Mean $key"] = mean
                     val currVar = stats.getOrDefault("Var $key", 0f)
-                    val deltaVar = Math.pow((value!! - mean).toDouble(), 2.0).toFloat() / numProtozoa
+                    val deltaVar = (value!! - mean).toDouble().pow(2.0).toFloat() / numProtozoa
                     stats["Var $key"] = currVar + deltaVar
                 }
             }

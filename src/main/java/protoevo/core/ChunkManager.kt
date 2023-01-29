@@ -7,6 +7,8 @@ import protoevo.utils.Vector2
 import java.io.Serializable
 import java.util.function.Consumer
 import java.util.function.Function
+import kotlin.math.max
+import kotlin.math.min
 
 class ChunkManager(
     val xMin: Float, val xMax: Float,
@@ -124,10 +126,10 @@ class ChunkManager(
             val chunk = getChunk(p)
             val i = chunk!!.chunkCoords.x.toInt()
             val j = chunk.chunkCoords.y.toInt()
-            iMax = Math.max(i, iMax)
-            iMin = Math.min(i, iMin)
-            jMax = Math.max(j, jMax)
-            jMin = Math.min(j, jMin)
+            iMax = max(i, iMax)
+            iMin = min(i, iMin)
+            jMax = max(j, jMax)
+            jMin = min(j, jMin)
         }
         for (i in iMin..iMax) for (j in jMin..jMax) chunks[toChunkID(i, j)]!!.addRock(rock)
     }

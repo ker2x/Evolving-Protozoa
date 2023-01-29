@@ -10,7 +10,7 @@ import protoevo.core.Simulation
 import protoevo.env.Tank
 import protoevo.utils.Vector2
 import java.io.Serializable
-import kotlin.math.pow
+import kotlin.math.*
 
 class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 ) : Cell(tank) {
@@ -43,7 +43,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 		var currentLength = 0f
         fun update(delta: Float) {
             if (currentLength < length) {
-                currentLength = Math.min(currentLength + delta * hidden_growthRate, length)
+                currentLength = min(currentLength + delta * hidden_growthRate, length)
             }
         }
 
@@ -104,7 +104,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
             val dirX = dir.x
             val dirY = dir.y
             val dirLength2 = dir.len2()
-            return (dx * dirX + dy * dirY) / Math.sqrt((d2 * dirLength2).toDouble()) < cosHalfFov
+            return (dx * dirX + dy * dirY) / sqrt((d2 * dirLength2).toDouble()) < cosHalfFov
         }
         return false
     }
@@ -125,7 +125,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         splitRadius = genome.splitRadius
         pos = Vector2(0f, 0f)
         val t = (2 * Math.PI * Simulation.RANDOM.nextDouble()).toFloat()
-        dir[(0.1f * Math.cos(t.toDouble())).toFloat()] = (0.1f * Math.sin(t.toDouble())).toFloat()
+        dir[(0.1f * cos(t.toDouble())).toFloat()] = (0.1f * sin(t.toDouble())).toFloat()
         contactSensors = arrayOfNulls(Settings.numContactSensors)
         for (i in 0 until Settings.numContactSensors) {
             contactSensors[i] = ContactSensor()
@@ -159,7 +159,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
                 o.rayCollisions(rayStartTmp, rayEndTmp, collisions)
                 var sqLen = Float.MAX_VALUE
                 for (collision in collisions) if (collision.collided) sqLen =
-                    Math.min(sqLen, collision.point.squareDistanceTo(rayStartTmp))
+                    min(sqLen, collision.point.squareDistanceTo(rayStartTmp))
                 if (sqLen < cell.collisionSqLen(i)) cell[i, o.getColor()] = sqLen
             }
         }
@@ -168,10 +168,8 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     private fun eat(e: EdibleCell?, delta: Float) {
         var extraction = 1f
         if (e is PlantCell) {
-            if (spikes.size > 0) extraction *= Math.pow(
-                Settings.spikePlantConsumptionPenalty.toDouble(),
-                spikes.size.toDouble()
-            ).toFloat()
+            if (spikes.size > 0) extraction *= Settings.spikePlantConsumptionPenalty.toDouble()
+                .pow(spikes.size.toDouble()).toFloat()
             extraction *= herbivoreFactor
         } else if (e is MeatCell) {
             extraction /= herbivoreFactor
@@ -194,9 +192,9 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     private fun think(delta: Float) {
         brain.tick(this)
         dir.turn(delta * 80 * brain.turn(this))
-        val spikeDecay = Math.pow(Settings.spikeMovementPenaltyFactor.toDouble(), spikes.size.toDouble()).toFloat()
+        val spikeDecay = Settings.spikeMovementPenaltyFactor.toDouble().pow(spikes.size.toDouble()).toFloat()
         val sizePenalty: Float = getRadius() / splitRadius // smaller flagella generate less impulse
-        val speed = Math.abs(brain.speed(this))
+        val speed = abs(brain.speed(this))
         val vel = dir.mul(sizePenalty * spikeDecay * speed)
         val work = .5f * _mass * vel.len2()
         if (enoughEnergyAvailable(work)) {
@@ -359,7 +357,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 
     fun setRetina(retina: Retina) {
         this.retina = retina
-        cosHalfFov = Math.cos((retina.fov / 2f).toDouble()).toFloat()
+        cosHalfFov = cos((retina.fov / 2f).toDouble()).toFloat()
     }
 
     fun getSpikeLength(spike: Spike): Float {

@@ -19,6 +19,8 @@ import javax.swing.JSlider
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 class UI(private val window: Window, private val simulation: Simulation, private val renderer: Renderer) :
     ChangeListener {
@@ -164,7 +166,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
                 text, infoTextSize,
                 Vector2(0f, getYPosRHS(lineNumber))
             )
-            maxWidth = Math.max(maxWidth, statText.width)
+            maxWidth = max(maxWidth, statText.width)
             statText.color = Color.YELLOW.darker()
             statTexts[lineNumber] = statText
             lineNumber++
@@ -222,7 +224,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
                     } else {
                         g.color = Color(240, 240, 240)
                     }
-                    g.stroke = BasicStroke((r * Math.abs(weight)).toInt().toFloat())
+                    g.stroke = BasicStroke((r * abs(weight)).toInt().toFloat())
                     if (neuron === inputNeuron) {
                         g.drawOval(
                             neuron.graphicsX,
@@ -232,9 +234,9 @@ class UI(private val window: Window, private val simulation: Simulation, private
                         )
                     } else if (inputNeuron.depth == neuron.depth) {
                         val width = boxWidth / (2 * networkDepth)
-                        val height = Math.abs(neuron.graphicsY - inputNeuron.graphicsY)
+                        val height = abs(neuron.graphicsY - inputNeuron.graphicsY)
                         val x = neuron.graphicsX - width / 2
-                        val y = Math.min(neuron.graphicsY, inputNeuron.graphicsY)
+                        val y = min(neuron.graphicsY, inputNeuron.graphicsY)
                         g.drawArc(x, y, width, height, -90, 180)
                     } else {
                         g.drawLine(
@@ -336,7 +338,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
         Arrays.fill(depthWidthValues, 0)
         for (n in neurons) if (n!!.isConnectedToOutput) depthWidthValues[n.depth]++
         var maxWidth = 0
-        for (width in depthWidthValues) maxWidth = Math.max(maxWidth, width)
+        for (width in depthWidthValues) maxWidth = max(maxWidth, width)
         val nodeSpacing = boxHeight / maxWidth
         nn.graphicsNodeSpacing = nodeSpacing
         for (depth in 0..networkDepth) {

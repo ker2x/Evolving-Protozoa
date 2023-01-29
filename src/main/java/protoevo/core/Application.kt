@@ -3,6 +3,7 @@ package protoevo.core
 import protoevo.utils.REPL
 import protoevo.utils.Window
 import javax.swing.SwingUtilities
+import kotlin.system.exitProcess
 
 object Application {
 
@@ -20,6 +21,6 @@ object Application {
 
     @JvmStatic
 	fun exit() {
-        System.exit(0)
+        exitProcess(0)
     }
 }

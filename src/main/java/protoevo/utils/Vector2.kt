@@ -1,8 +1,7 @@
 package protoevo.utils
 
 import java.io.Serializable
-import kotlin.math.atan2
-import kotlin.math.sqrt
+import kotlin.math.*
 
 class Vector2(x: Float, y: Float) : Serializable {
 
@@ -91,13 +90,13 @@ class Vector2(x: Float, y: Float) : Serializable {
     fun angleBetween(other: Vector2): Float {
         val a = len2()
         val b = other.len2()
-        return Math.acos(dot(other) / Math.sqrt((a * b).toDouble())).toFloat()
+        return acos(dot(other) / sqrt((a * b).toDouble())).toFloat()
     }
 
     fun distanceTo(other: Vector2): Float {
         val dx = x - other.x
         val dy = y - other.y
-        return Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        return sqrt((dx * dx + dy * dy).toDouble()).toFloat()
     }
 
     fun squareDistanceTo(other: Vector2): Float {
@@ -116,7 +115,7 @@ class Vector2(x: Float, y: Float) : Serializable {
     fun moveAway(other: Vector2, amount: Float) {
         val dx = x - other.x
         val dy = y - other.y
-        val l = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        val l = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
         x = other.x + dx * amount / l
         y = other.y + dy * amount / l
     }
@@ -151,7 +150,7 @@ class Vector2(x: Float, y: Float) : Serializable {
         private const val serialVersionUID = 8642244552320036511L
         @JvmStatic
         fun fromAngle(angle: Float): Vector2 {
-            return Vector2(Math.cos(angle.toDouble()).toFloat(), Math.sin(angle.toDouble()).toFloat())
+            return Vector2(cos(angle.toDouble()).toFloat(), sin(angle.toDouble()).toFloat())
         }
     }
 }

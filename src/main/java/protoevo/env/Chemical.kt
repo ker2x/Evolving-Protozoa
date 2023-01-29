@@ -2,6 +2,10 @@ package protoevo.env
 
 import protoevo.core.Settings
 import java.io.Serializable
+import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.tanh
 
 class Chemical : Serializable {
     var currentPlantPheromoneDensity = 0f
@@ -21,17 +25,17 @@ class Chemical : Serializable {
     }
 
     fun update() {
-        currentPlantPheromoneDensity = Math.max(Math.min(nextPlantPheromoneDensity, 1f), 0f)
+        currentPlantPheromoneDensity = max(min(nextPlantPheromoneDensity, 1f), 0f)
         if (java.lang.Float.isNaN(currentPlantPheromoneDensity)) currentPlantPheromoneDensity = 0f
     }
 
     private fun sigmoid(z: Float): Float {
-        return 1 / (1 + Math.exp(-z.toDouble()).toFloat())
+        return 1 / (1 + exp(-z.toDouble()).toFloat())
     }
 
     fun pheromoneFlow(other: Chemical): Float {
         val densityDiff = other.currentPlantPheromoneDensity - currentPlantPheromoneDensity
-        val p = Settings.chemicalsFlow * Math.tanh(densityDiff.toDouble()).toFloat()
+        val p = Settings.chemicalsFlow * tanh(densityDiff.toDouble()).toFloat()
         return p * densityDiff
     }
 

@@ -6,6 +6,8 @@ import protoevo.core.Simulation
 import protoevo.utils.Vector2
 import java.awt.Color
 import java.io.Serializable
+import kotlin.math.max
+import kotlin.math.min
 
 class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializable {
     @JvmField
@@ -23,10 +25,10 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
     }
 
     private fun computeBounds(): Array<Vector2?> {
-        val minX = Math.min(points[0]!!.x, Math.min(points[1]!!.x, points[2]!!.x))
-        val minY = Math.min(points[0]!!.y, Math.min(points[1]!!.y, points[2]!!.y))
-        val maxX = Math.max(points[0]!!.x, Math.max(points[1]!!.x, points[2]!!.x))
-        val maxY = Math.max(points[0]!!.y, Math.max(points[1]!!.y, points[2]!!.y))
+        val minX = min(points[0]!!.x, min(points[1]!!.x, points[2]!!.x))
+        val minY = min(points[0]!!.y, min(points[1]!!.y, points[2]!!.y))
+        val maxX = max(points[0]!!.x, max(points[1]!!.x, points[2]!!.x))
+        val maxY = max(points[0]!!.y, max(points[1]!!.y, points[2]!!.y))
         return arrayOf(Vector2(minX, minY), Vector2(maxX, maxY))
     }
 

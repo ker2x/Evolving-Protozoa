@@ -13,6 +13,7 @@ import java.awt.Color
 import java.io.Serializable
 import java.util.*
 import java.util.function.Consumer
+import kotlin.math.*
 
 abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     fun interface EntityBuilder<T, R> {
@@ -153,7 +154,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
             for (molecule in food.complexMolecules) {
                 val amount = food.getComplexMoleculeMass(molecule)
                 if (amount == 0f) continue
-                val extracted = Math.min(amount, amount * rate)
+                val extracted = min(amount, amount * rate)
                 addAvailableComplexMolecule(molecule, extracted)
                 food.subtractComplexMolecule(molecule, extracted)
             }
@@ -255,7 +256,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         val other = binding.destinationEntity
         val transferRate = Settings.channelBindingEnergyTransport
         val massDelta = constructionMassAvailable - other.constructionMassAvailable
-        val constructionMassTransfer = Math.abs(transferRate * massDelta * delta)
+        val constructionMassTransfer = abs(transferRate * massDelta * delta)
         if (massDelta > 0) {
             other.addConstructionMass(constructionMassTransfer)
             useConstructionMass(constructionMassTransfer)
@@ -264,7 +265,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
             other.useConstructionMass(constructionMassTransfer)
         }
         val energyDelta = energyAvailable - other.energyAvailable
-        val energyTransfer = Math.abs(transferRate * energyDelta * delta)
+        val energyTransfer = abs(transferRate * energyDelta * delta)
         if (energyDelta > 0) {
             other.addAvailableEnergy(energyTransfer)
             useEnergy(energyTransfer)
@@ -415,7 +416,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
 
         // Tank tank = tank;	// TODO: fix this
         for (i in 0 until nChildren) {
-            val dir = Vector2(Math.cos(angle.toDouble()).toFloat(), Math.sin(angle.toDouble()).toFloat())
+            val dir = Vector2(cos(angle.toDouble()).toFloat(), sin(angle.toDouble()).toFloat())
             val p = (0.3 + 0.7 * Simulation.RANDOM.nextDouble() / nChildren).toFloat()
             val nEntities: Int = tank.cellCounts.getOrDefault(type!!, 0)
             val maxEntities: Int = tank.cellCapacities.getOrDefault(type, 0)
@@ -475,14 +476,14 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     }
 
     fun addAvailableEnergy(energy: Float) {
-        energyAvailable = Math.min(energyAvailable + energy, availableEnergyCap)
+        energyAvailable = min(energyAvailable + energy, availableEnergyCap)
     }
 
     private val availableEnergyCap: Float
         private get() = Settings.startingAvailableCellEnergy * getRadius() / Settings.minParticleRadius
 
     fun useEnergy(energy: Float) {
-        energyAvailable = Math.max(0f, energyAvailable - energy)
+        energyAvailable = max(0f, energyAvailable - energy)
     }
 
     val complexMolecules: Collection<ComplexMolecule>
@@ -499,7 +500,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
 
     private fun addAvailableComplexMolecule(molecule: ComplexMolecule, amount: Float) {
         val currentAmount = availableComplexMolecules.getOrDefault(molecule, 0f)
-        val newAmount = Math.min(complexMoleculeMassCap, currentAmount + amount)
+        val newAmount = min(complexMoleculeMassCap, currentAmount + amount)
         availableComplexMolecules[molecule] = newAmount
         _mass = computeMass()
     }
@@ -508,7 +509,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         private get() = getMass(getRadius() * 0.1f)
 
     fun setComplexMoleculeAvailable(molecule: ComplexMolecule, amount: Float) {
-        availableComplexMolecules[molecule] = Math.max(0f, amount)
+        availableComplexMolecules[molecule] = max(0f, amount)
         _mass = computeMass()
     }
 
@@ -516,7 +517,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
         get() = 2 * massDensity * getSphereVolume(getRadius() * 0.25f)
 
     fun setAvailableConstructionMass(mass: Float) {
-        constructionMassAvailable = Math.min(mass, constructionMassCap)
+        constructionMassAvailable = min(mass, constructionMassCap)
         this._mass = computeMass()
     }
 
@@ -525,7 +526,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     }
 
     fun useConstructionMass(mass: Float) {
-        constructionMassAvailable = Math.max(0f, constructionMassAvailable - mass)
+        constructionMassAvailable = max(0f, constructionMassAvailable - mass)
     }
 
     fun setComplexMoleculeProductionRate(molecule: ComplexMolecule, rate: Float) {
@@ -554,7 +555,7 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
     fun removeMass(mass: Float) {
         val x = 3 * mass / (4 * massDensity * Math.PI)
         val r = getRadius()
-        val newR = Math.pow(r * r * r - x, 1 / 3.0).toFloat()
+        val newR = (r * r * r - x).pow(1 / 3.0).toFloat()
         if (newR < Settings.minParticleRadius * 0.9f) killCell()
         setRadius(newR)
     }

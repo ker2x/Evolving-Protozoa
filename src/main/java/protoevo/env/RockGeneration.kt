@@ -5,11 +5,13 @@ import protoevo.core.Simulation
 import protoevo.utils.Geometry.doesLineIntersectCircle
 import protoevo.utils.Vector2
 import protoevo.utils.Vector2.Companion.fromAngle
+import kotlin.math.abs
+import kotlin.math.asin
 
 object RockGeneration {
     @JvmOverloads
     fun generateRingOfRocks(tank: Tank, ringCentre: Vector2?, ringRadius: Float, breakProb: Float = 0f) {
-        val angleDelta = (2 * Math.asin((Settings.minRockSize / (2 * ringRadius)).toDouble())).toFloat()
+        val angleDelta = (2 * asin((Settings.minRockSize / (2 * ringRadius)).toDouble())).toFloat()
         var currentRock: Rock? = null
         var angle = 0f
         while (angle < 2 * Math.PI) {
@@ -34,7 +36,7 @@ object RockGeneration {
                     if (!currentRock.isEdgeAttached(i)) {
                         val newRock = newAttachedRock(currentRock, i, tank.rocks, rockSize)
                         if (newRock != null) {
-                            val dist = Math.abs(newRock.centre.sub(ringCentre!!).len() - ringRadius)
+                            val dist = abs(newRock.centre.sub(ringCentre!!).len() - ringRadius)
                             if (dist < bestRockDistToCirc) {
                                 bestRockDistToCirc = dist
                                 bestNextRock = newRock

@@ -4,6 +4,7 @@ import java.io.Serializable
 import java.util.*
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import kotlin.math.max
 
 class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
     private val outputNeurons: Array<Neuron?>
@@ -60,7 +61,7 @@ class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
         for (n in unexplored) {
             val neuronDepth = 1 + calculateDepth(n?.inputs, visited)
             n?.depth = (neuronDepth)
-            maxDepth = Math.max(maxDepth, neuronDepth)
+            maxDepth = max(maxDepth, neuronDepth)
         }
         return maxDepth
     }
