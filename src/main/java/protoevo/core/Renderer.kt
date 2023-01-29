@@ -389,8 +389,7 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
 
     fun drawCollisionBounds(g: Graphics2D, collidable: Collidable?, color: Color?) {
         if (collidable is Cell) {
-            val e = collidable
-            drawCollisionBounds(g, e, e.getRadius(), color)
+            drawCollisionBounds(g, collidable, collidable.getRadius(), color)
         } else if (collidable is Rock) {
             drawCollisionBounds(g, collidable, color)
         }

@@ -36,8 +36,7 @@ class Chunk(private val x: Int, private val y: Int, private val chunkManager: Ch
 
     override fun equals(o: Any?): Boolean {
         if (o is Chunk) {
-            val otherChunk = o
-            return otherChunk.x == x && otherChunk.y == y
+            return o.x == x && o.y == y
         }
         return false
     }

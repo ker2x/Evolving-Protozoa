@@ -98,9 +98,8 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 
     fun cullFromRayCasting(o: Collidable?): Boolean {
         if (o is Particle) {
-            val p = o
-            val dx = p.pos!!.x - pos!!.x
-            val dy = p.pos!!.y - pos!!.y
+            val dx = o.pos!!.x - pos!!.x
+            val dy = o.pos!!.y - pos!!.y
             val d2 = dx * dx + dy * dy
             val dirX = dir.x
             val dirY = dir.y
@@ -239,22 +238,20 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         }
         val r: Float = getRadius() + other.getRadius()
         if (other is Protozoan) {
-            val p = other
             for (spike in spikes) {
                 val spikeLen = getSpikeLength(spike)
-                if (d < r + spikeLen && spikeInContact(spike, spikeLen, p)) attack(p, spike, delta)
+                if (d < r + spikeLen && spikeInContact(spike, spikeLen, other)) attack(other, spike, delta)
             }
         }
         if (0.95 * d < r) {
             if (other is Protozoan) {
-                val p = other
-                if (brain.wantToMateWith(p) && p.brain.wantToMateWith(this)) {
-                    if (p !== mate) {
+                if (brain.wantToMateWith(other) && other.brain.wantToMateWith(this)) {
+                    if (other !== mate) {
                         timeMating = 0f
-                        mate = p
+                        mate = other
                     } else {
                         timeMating += delta
-                        if (timeMating >= Settings.matingTime) crossOverGenome = p.genome
+                        if (timeMating >= Settings.matingTime) crossOverGenome = other.genome
                     }
                 }
             } else if (other.isEdible()) eat(other as EdibleCell, delta)

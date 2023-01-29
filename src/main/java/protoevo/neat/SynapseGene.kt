@@ -18,9 +18,8 @@ class SynapseGene @JvmOverloads constructor(
 
     override fun equals(o: Any?): Boolean {
         if (o is SynapseGene) {
-            val otherSynGene = o
-            val otherIn = otherSynGene.`in`
-            val otherOut = otherSynGene.out
+            val otherIn = o.`in`
+            val otherOut = o.out
             return `in` == otherIn && out == otherOut
         }
         return false

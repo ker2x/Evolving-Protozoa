@@ -108,8 +108,7 @@ class Vector2(x: Float, y: Float) : Serializable {
 
     override fun equals(o: Any?): Boolean {
         if (o is Vector2) {
-            val v = o
-            return v.x == x && v.y == y
+            return o.x == x && o.y == y
         }
         return false
     }

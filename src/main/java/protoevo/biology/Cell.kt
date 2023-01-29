@@ -226,14 +226,13 @@ abstract class Cell(tank: Tank?) : Particle(tank!!), Serializable {
 
     override fun onParticleCollisionCallback(p: Particle?, delta: Float) {
         if (p is Cell) {
-            val otherCell = p
-            if (otherCell.cannotMakeBinding() || cannotMakeBinding()) return
+            if (p.cannotMakeBinding() || cannotMakeBinding()) return
             for (myCAM in getSurfaceCAMs()) {
-                for (theirCAM in otherCell.getSurfaceCAMs()) {
+                for (theirCAM in p.getSurfaceCAMs()) {
                     // TODO: implement probabilistic CAM binding based on amounts
                     if (myCAM.bindsTo(theirCAM)) {
-                        createNewBinding(myCAM, otherCell)
-                        otherCell.createNewBinding(theirCAM, this)
+                        createNewBinding(myCAM, p)
+                        p.createNewBinding(theirCAM, this)
                     }
                 }
             }
