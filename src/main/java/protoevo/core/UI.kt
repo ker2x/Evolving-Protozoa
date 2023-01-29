@@ -18,6 +18,7 @@ import javax.swing.JLabel
 import javax.swing.JSlider
 import javax.swing.event.ChangeEvent
 import javax.swing.event.ChangeListener
+import kotlin.math.abs
 
 class UI(private val window: Window, private val simulation: Simulation, private val renderer: Renderer) :
     ChangeListener {
@@ -204,12 +205,12 @@ class UI(private val window: Window, private val simulation: Simulation, private
         )
         val r = nn.graphicsNodeSpacing / 8
         for (neuron in nn.neurons) {
-            if (neuron.type != Neuron.Type.SENSOR && neuron.isConnectedToOutput) {
+            if (neuron!!.type != Neuron.Type.SENSOR && neuron!!.isConnectedToOutput) {
                 val s = g.stroke
-                for (i in neuron.inputs.indices) {
-                    val inputNeuron = neuron.inputs[i]
-                    val weight = inputNeuron.lastState * neuron.weights[i]
-                    if (Math.abs(weight) <= 1e-4) continue
+                for (i in neuron!!.inputs.indices) {
+                    val inputNeuron = neuron!!.inputs[i]
+                    val weight = inputNeuron!!.lastState * neuron.weights[i]
+                    if (abs(weight) <= 1e-4) continue
                     if (weight > 0) {
                         val p: Float = if (weight > 1) 1F else weight
                         g.color = Color((240 - 100 * p).toInt(), 240, (255 - 100 * p).toInt())
@@ -246,9 +247,9 @@ class UI(private val window: Window, private val simulation: Simulation, private
             }
         }
         for (neuron in nn.neurons) {
-            if (!neuron.isConnectedToOutput) continue
+            if (!neuron!!.isConnectedToOutput) continue
             var colour: Color
-            var state = neuron.lastState.toDouble()
+            var state = neuron!!.lastState.toDouble()
             if (state > 0) {
                 state = if (state > 1) 1.0 else state
                 colour = Color(
@@ -290,8 +291,8 @@ class UI(private val window: Window, private val simulation: Simulation, private
         val mouseY = mousePos.y.toInt()
         if (boxXStart - 2 * r < mouseX && mouseX < boxXStart + boxWidth + 2 * r && boxYStart - 2 * r < mouseY && mouseY < boxYStart + boxHeight + 2 * r) {
             for (neuron in nn.neurons) {
-                val x = neuron.graphicsX
-                val y = neuron.graphicsY
+                val x = neuron!!.graphicsX
+                val y = neuron!!.graphicsY
                 if (simulation.inDebugMode()) {
                     g.color = Color.YELLOW.darker()
                     g.drawRect(x - 2 * r, y - 2 * r, 4 * r, 4 * r)
@@ -299,8 +300,8 @@ class UI(private val window: Window, private val simulation: Simulation, private
                     val r2 = r / 5
                     g.drawOval(mouseX - r2, mouseY - r2, 2 * r2, 2 * r2)
                 }
-                if (neuron.label != null && x - 2 * r <= mouseX && mouseX <= x + 2 * r && y - 2 * r <= mouseY && mouseY <= y + 2 * r) {
-                    val labelStr = neuron.label + " = " + numberToString(neuron.lastState, 2)
+                if (neuron!!.label != null && x - 2 * r <= mouseX && mouseX <= x + 2 * r && y - 2 * r <= mouseY && mouseY <= y + 2 * r) {
+                    val labelStr = neuron!!.label + " = " + numberToString(neuron!!.lastState, 2)
                     val label = TextObject(labelStr, infoTextSize)
                     label.color = Color.WHITE.darker()
                     var labelX = x - label.width / 2
@@ -333,7 +334,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
         val networkDepth = nn.calculateDepth()
         val depthWidthValues = IntArray(networkDepth + 1)
         Arrays.fill(depthWidthValues, 0)
-        for (n in neurons) if (n.isConnectedToOutput) depthWidthValues[n.depth]++
+        for (n in neurons) if (n!!.isConnectedToOutput) depthWidthValues[n.depth]++
         var maxWidth = 0
         for (width in depthWidthValues) maxWidth = Math.max(maxWidth, width)
         val nodeSpacing = boxHeight / maxWidth
@@ -343,7 +344,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
             val nNodes = depthWidthValues[depth]
             var i = 0
             for (n in neurons) {
-                if (n.depth == depth && n.isConnectedToOutput) {
+                if (n!!.depth == depth && n!!.isConnectedToOutput) {
                     val y = (boxYStart + nodeSpacing / 2f + boxHeight / 2f - (nNodes / 2f - i) * nodeSpacing).toInt()
                     n.setGraphicsPosition(x, y)
                     i++

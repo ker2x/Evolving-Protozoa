@@ -1,60 +1,31 @@
-package protoevo.neat;
+package protoevo.neat
 
-import java.io.Serializable;
-import java.util.Objects;
+import protoevo.neat.Neuron.Activation
+import java.io.Serializable
+import java.util.*
 
-public class NeuronGene implements Comparable<NeuronGene>, Serializable
-{
+class NeuronGene @JvmOverloads constructor(
+    val id: Int,
+    val type: Neuron.Type,
+    val activation: (Float) -> Float,
+    val label: String? = null
+) : Comparable<NeuronGene>, Serializable {
 
-    private final int id;
-    private final Neuron.Type type;
-    private final Neuron.Activation activation;
-
-    private final String label;
-
-    public NeuronGene(int id, Neuron.Type type, Neuron.Activation activation)
-    {
-        this(id, type, activation, null);
+    override fun compareTo(o: NeuronGene): Int {
+        return id - o.id
     }
 
-    public NeuronGene(int id, Neuron.Type type, Neuron.Activation activation, String label)
-    {
-        this.id = id;
-        this.type = type;
-        this.activation = activation;
-        this.label = label;
+    override fun equals(o: Any?): Boolean {
+        return if (o is NeuronGene) o.id == id else false
     }
 
-    @Override
-    public int compareTo(NeuronGene o) {
-        return id - o.id;
+    override fun hashCode(): Int {
+        return Objects.hash(id)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof NeuronGene)
-            return ((NeuronGene) o).getId() == id;
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        String str = String.format("Neuron: id=%d; type=%s", id, type);
-        if (label != null)
-            str += ", label=" + label;
-        return str;
-    }
-
-    public int getId() { return id; }
-    public Neuron.Type getType() { return type; }
-    public Neuron.Activation getActivation() { return activation; }
-
-    public String getLabel() {
-        return label;
+    override fun toString(): String {
+        var str = String.format("Neuron: id=%d; type=%s", id, type)
+        if (label != null) str += ", label=$label"
+        return str
     }
 }

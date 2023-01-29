@@ -1,181 +1,126 @@
-package protoevo.neat;
+package protoevo.neat
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.io.Serializable
+import java.util.*
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
-public class NeuralNetwork implements Serializable
-{
-    private static final long serialVersionUID = 1L;
+class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
+    private val outputNeurons: Array<Neuron?>
+    private val inputNeurons: Array<Neuron?>
+    private val outputs: FloatArray
+    val depth: Int
+    val inputSize: Int
+    private var computedGraphics = false
+    var graphicsNodeSpacing = 0
 
-    private final Neuron[] outputNeurons;
-    private final Neuron[] inputNeurons;
-    private final float[] outputs;
-    private final Neuron[] neurons;
-    private final int depth;
-    private final int nInputs;
-    private boolean computedGraphics = false;
-    private int nodeSpacing;
-
-    public NeuralNetwork(Neuron[] neurons) {
-        this.neurons = neurons;
-
-        int nSensors = 0;
-        int nOutputs = 0;
-        for (Neuron neuron : neurons) {
-            if (neuron == null)
-                throw new IllegalArgumentException("Cannot handle null neurons.");
-            else if (neuron.getType().equals(Neuron.Type.SENSOR))
-                nSensors++;
-            else if (neuron.getType().equals(Neuron.Type.OUTPUT))
-                nOutputs++;
+    init {
+        var nSensors = 0
+        var nOutputs = 0
+        for (neuron in neurons) {
+            requireNotNull(neuron) { "Cannot handle null neurons." }
+            if (neuron.type == Neuron.Type.SENSOR) nSensors++ else if (neuron.type == Neuron.Type.OUTPUT) nOutputs++
         }
-        this.nInputs = nSensors;
-
-        inputNeurons = new Neuron[nInputs];
-        int i = 0;
-        for (Neuron neuron : neurons)
-            if (neuron.getType().equals(Neuron.Type.SENSOR)) {
-                inputNeurons[i] = neuron;
-                i++;
-            }
-
-        outputNeurons = new Neuron[nOutputs];
-        i = 0;
-        for (Neuron neuron : neurons)
-            if (neuron.getType().equals(Neuron.Type.OUTPUT)) {
-                outputNeurons[i] = neuron;
-                i++;
-            }
-
-        outputs = new float[nOutputs];
-        Arrays.fill(outputs, 0f);
-
-        depth = calculateDepth();
-    }
-
-    public int getDepth() {
-        return depth;
-    }
-
-    public int calculateDepth() {
-        boolean[] visited = new boolean[neurons.length];
-        Arrays.fill(visited, false);
-        int depth = calculateDepth(outputNeurons, visited);
-
-        for (Neuron n : outputNeurons)
-            n.setDepth(depth);
-
-        for (Neuron n : inputNeurons)
-            n.setDepth(0);
-
-        for (Neuron n : neurons)
-            if (n.getDepth() == -1)
-                n.setDepth(depth);
-
-        return depth;
-    }
-
-    private int calculateDepth(Neuron[] explore, boolean[] visited) {
-
-        List<Neuron> unexplored = Arrays.stream(explore)
-                .filter(n -> !visited[n.getId()])
-                .collect(Collectors.toList());
-
-        for (Neuron n : explore)
-            visited[n.getId()] = true;
-
-        int maxDepth = 0;
-
-        for (Neuron n : unexplored) {
-            int neuronDepth = 1 + calculateDepth(n.getInputs(), visited);
-            n.setDepth(neuronDepth);
-            maxDepth = Math.max(maxDepth, neuronDepth);
+        inputSize = nSensors
+        inputNeurons = arrayOfNulls(inputSize)
+        var i = 0
+        for (neuron in neurons) if (neuron?.type == Neuron.Type.SENSOR) {
+            inputNeurons[i] = neuron
+            i++
         }
-
-        return maxDepth;
+        outputNeurons = arrayOfNulls(nOutputs)
+        i = 0
+        for (neuron in neurons) if (neuron?.type == Neuron.Type.OUTPUT) {
+            outputNeurons[i] = neuron
+            i++
+        }
+        outputs = FloatArray(nOutputs)
+        Arrays.fill(outputs, 0f)
+        depth = calculateDepth()
     }
 
-    public void setInput(float ... values) {
-        for (int i = 0; i < values.length; i++)
-            inputNeurons[i].setState(values[i]);
+    fun calculateDepth(): Int {
+        val visited = BooleanArray(neurons.size)
+        Arrays.fill(visited, false)
+        val depth = calculateDepth(outputNeurons, visited)
+        for (n in outputNeurons) n?.depth = (depth)
+        for (n in inputNeurons) n?.depth = (0)
+        for (n in neurons) if (n?.depth == -1) n.depth = (depth)
+        return depth
     }
 
-    public void tick()
-    {
-        for (Neuron n : neurons) n.tick();
-        for (Neuron n : neurons) n.update();
+    private fun calculateDepth(explore: Array<Neuron?>?, visited: BooleanArray): Int {
+        val unexplored = Arrays.stream(explore)
+            .filter { n: Neuron? -> !visited[n!!.id] }
+            .collect(Collectors.toList())
+        for (n in explore!!) if (n != null) {
+            visited[n.id] = true
+        }
+        var maxDepth = 0
+        for (n in unexplored) {
+            val neuronDepth = 1 + calculateDepth(n?.inputs, visited)
+            n?.depth = (neuronDepth)
+            maxDepth = Math.max(maxDepth, neuronDepth)
+        }
+        return maxDepth
     }
 
-    public float[] outputs()
-    {
-        for (int i = 0; i < outputNeurons.length; i++)
-            outputs[i] = outputNeurons[i].getState();
-        return outputs;
+    fun setInput(vararg values: Float) {
+        for (i in values.indices) inputNeurons[i]!!.state = values[i]
     }
 
-    @Override
-    public String toString()
-    {
-        return Stream.of(neurons)
-                .map(Neuron::toString)
-                .collect(Collectors.joining("\n"));
+    fun tick() {
+        for (n in neurons) n!!.tick()
+        for (n in neurons) n!!.update()
     }
 
-    public int getInputSize() {
-        return nInputs;
+    fun outputs(): FloatArray {
+        for (i in outputNeurons.indices) outputs[i] = outputNeurons[i]!!.state
+        return outputs
     }
 
-    public int getSize() {
-        return neurons.length;
+    override fun toString(): String {
+        return Stream.of(*neurons)
+            .map { obj: Neuron? -> obj.toString() }
+            .collect(Collectors.joining("\n"))
     }
 
-    public Neuron[] getNeurons() {
-        return neurons;
+    val size: Int
+        get() = neurons.size
+
+    fun hasComputedGraphicsPositions(): Boolean {
+        return computedGraphics
     }
 
-    public boolean hasComputedGraphicsPositions() {
-        return computedGraphics;
+    fun setComputedGraphicsPositions(computedGraphics: Boolean) {
+        this.computedGraphics = computedGraphics
     }
 
-    public void setComputedGraphicsPositions(boolean computedGraphics) {
-        this.computedGraphics = computedGraphics;
+    fun disableInputsFrom(i: Int) {
+        for (idx in i until inputNeurons.size) inputNeurons[idx]?.isConnectedToOutput = (false)
+        //        disableOnlyConnectedToDisabled();
     }
 
-    public void setGraphicsNodeSpacing(int nodeSpacing) {
-        this.nodeSpacing = nodeSpacing;
-    }
-
-    public int getGraphicsNodeSpacing() {
-        return nodeSpacing;
-    }
-
-    public void disableInputsFrom(int i) {
-        for (int idx = i; idx < inputNeurons.length; idx++)
-            inputNeurons[idx].setConnectedToOutput(false);
-//        disableOnlyConnectedToDisabled();
-    }
-
-    private void disableOnlyConnectedToDisabled() {
-        boolean check = true;
+    private fun disableOnlyConnectedToDisabled() {
+        var check = true
         while (check) {
-            check = false;
-            for (Neuron neuron : neurons) {
-                if (!neuron.isConnectedToOutput())
-                    continue;
-
-                boolean allInputsDisabled = true;
-                for (Neuron input : neuron.getInputs())
-                    if (!input.isConnectedToOutput()) {
-                        allInputsDisabled = false;
-                        break;
-                    }
+            check = false
+            for (neuron in neurons) {
+                if (!neuron!!.isConnectedToOutput) continue
+                var allInputsDisabled = true
+                for (input in neuron.inputs) if (!input!!.isConnectedToOutput) {
+                    allInputsDisabled = false
+                    break
+                }
                 if (allInputsDisabled) {
-                    neuron.setConnectedToOutput(false);
-                    check = true;
+                    neuron.isConnectedToOutput = false
+                    check = true
                 }
             }
         }
+    }
+
+    companion object {
+        private const val serialVersionUID = 1L
     }
 }

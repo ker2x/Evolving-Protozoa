@@ -1,364 +1,294 @@
-package protoevo.neat;
+package protoevo.neat
 
-import protoevo.biology.Retina;
-import protoevo.core.Settings;
-import protoevo.core.Simulation;
+import protoevo.biology.Retina
+import protoevo.core.Settings
+import protoevo.core.Simulation
+import protoevo.neat.Neuron
+import java.io.Serializable
+import java.util.*
+import java.util.function.Function
+import java.util.stream.Collectors
+import java.util.stream.Stream
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+class NetworkGenome : Serializable {
+    private lateinit var sensorNeuronGenes: Array<NeuronGene?>
+    private lateinit var outputNeuronGenes: Array<NeuronGene?>
+    private lateinit var hiddenNeuronGenes: Array<NeuronGene?>
+    private var nNeuronGenes = 0
+    lateinit var synapseGenes: Array<SynapseGene?>
+        private set
+    private var random = Simulation.RANDOM
+    private var mutationChance = Settings.globalMutationChance
+    private var defaultActivation = Neuron.Activation.Companion.LINEAR
+    private var fitness = 0.0f
+    var numMutations = 0
+        private set
+    private var nSensors = 0
+    private var nOutputs = 0
 
-public class NetworkGenome implements Serializable
-{
-	public static final long serialVersionUID = 6145947068527764820L;
-	private NeuronGene[] sensorNeuronGenes, outputNeuronGenes, hiddenNeuronGenes;
-	private int nNeuronGenes;
-	private SynapseGene[] synapseGenes;
-	private Random random = Simulation.RANDOM;
-	private float mutationChance = Settings.globalMutationChance;
-	private Neuron.Activation defaultActivation = Neuron.Activation.LINEAR;
-	private float fitness = 0.0f;
-	private int numMutations = 0, nSensors, nOutputs;
+    constructor(other: NetworkGenome) {
+        setProperties(other)
+    }
 
-	public NetworkGenome(NetworkGenome other) {
-		setProperties(other);
-	}
+    fun setProperties(other: NetworkGenome) {
+        sensorNeuronGenes = other.sensorNeuronGenes
+        outputNeuronGenes = other.outputNeuronGenes
+        hiddenNeuronGenes = other.hiddenNeuronGenes
+        synapseGenes = other.synapseGenes
+        nNeuronGenes = other.nNeuronGenes
+        random = other.random
+        mutationChance = other.mutationChance
+        defaultActivation = other.defaultActivation
+        fitness = other.fitness
+        numMutations = other.numMutations
+        nSensors = other.nSensors
+        nOutputs = other.nOutputs
+    }
 
-	public void setProperties(NetworkGenome other)
-	{
-		sensorNeuronGenes = other.sensorNeuronGenes;
-		outputNeuronGenes = other.outputNeuronGenes;
-		hiddenNeuronGenes = other.hiddenNeuronGenes;
-		synapseGenes = other.synapseGenes;
-		nNeuronGenes = other.nNeuronGenes;
-		random = other.random;
-		mutationChance = other.mutationChance;
-		defaultActivation = other.defaultActivation;
-		fitness = other.fitness;
-		numMutations = other.numMutations;
-		nSensors = other.nSensors;
-		nOutputs = other.nOutputs;
-	}
+    @JvmOverloads
+    constructor(numInputs: Int = 0, numOutputs: Int = 0, defaultActivation: (input: Float) -> Float = Neuron.Activation.Companion.TANH) {
+        nSensors = numInputs
+        nOutputs = numOutputs
+        nNeuronGenes = 0
+        sensorNeuronGenes = arrayOfNulls(numInputs)
+        for (i in 0 until numInputs) sensorNeuronGenes[i] =
+            NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.Companion.LINEAR)
+        outputNeuronGenes = arrayOfNulls(numOutputs)
+        for (i in 0 until numOutputs) outputNeuronGenes[i] =
+            NeuronGene(nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation)
+        hiddenNeuronGenes = arrayOfNulls(0)
+        synapseGenes = arrayOfNulls(numInputs * numOutputs)
+        for (i in 0 until numInputs) for (j in 0 until numOutputs) {
+            val `in` = sensorNeuronGenes[i]
+            val out = outputNeuronGenes[j]
+            synapseGenes[i * numOutputs + j] = SynapseGene(`in`, out)
+        }
+        this.defaultActivation = defaultActivation
+    }
 
-	public NetworkGenome() {
-		this(0, 0);
-	}
+    constructor(
+        sensorGenes: Array<NeuronGene?>,
+        outputGenes: Array<NeuronGene?>,
+        hiddenGenes: Array<NeuronGene?>,
+        synapseGenes: Array<SynapseGene?>,
+        activation: (Float) -> Float
+    ) {
+        sensorNeuronGenes = sensorGenes
+        outputNeuronGenes = outputGenes
+        hiddenNeuronGenes = hiddenGenes
+        this.synapseGenes = synapseGenes
+        defaultActivation = activation
+        nSensors = sensorGenes.size
+        nOutputs = outputGenes.size
+        nNeuronGenes = nSensors + nOutputs + hiddenGenes.size
+    }
 
-	public NetworkGenome(int numInputs, int numOutputs)
-	{
-		this(numInputs, numOutputs, Neuron.Activation.TANH);
-	}
+    fun addSensor(label: String?) {
+        val n = NeuronGene(
+            nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.Companion.LINEAR, label
+        )
+        sensorNeuronGenes = Arrays.copyOf(sensorNeuronGenes, sensorNeuronGenes.size + 1)
+        sensorNeuronGenes[sensorNeuronGenes.size - 1] = n
+        nSensors++
+        val originalLen = synapseGenes.size
+        synapseGenes = Arrays.copyOf(synapseGenes, originalLen + outputNeuronGenes.size)
+        for (i in outputNeuronGenes.indices) synapseGenes[originalLen + i] = SynapseGene(n, outputNeuronGenes[i])
+    }
 
-	public NetworkGenome(int numInputs, int numOutputs, Neuron.Activation defaultActivation)
-	{
-		this.nSensors = numInputs;
-		this.nOutputs = numOutputs;
+    fun addOutput(label: String?) {
+        val n = NeuronGene(
+            nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation, label
+        )
+        outputNeuronGenes = Arrays.copyOf(outputNeuronGenes, outputNeuronGenes.size + 1)
+        outputNeuronGenes[outputNeuronGenes.size - 1] = n
+        nOutputs++
+        val originalLen = synapseGenes.size
+        synapseGenes = Arrays.copyOf(synapseGenes, originalLen + sensorNeuronGenes.size)
+        for (i in sensorNeuronGenes.indices) synapseGenes[originalLen + i] = SynapseGene(sensorNeuronGenes[i], n)
+    }
 
-		nNeuronGenes = 0;
-		sensorNeuronGenes = new NeuronGene[numInputs];
-		for (int i = 0; i < numInputs; i++)
-			sensorNeuronGenes[i] = new NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR);
+    private fun createHiddenBetween(g: SynapseGene?) {
+        val n = NeuronGene(
+            nNeuronGenes++, Neuron.Type.HIDDEN, defaultActivation
+        )
+        hiddenNeuronGenes = Arrays.copyOf(hiddenNeuronGenes, hiddenNeuronGenes.size + 1)
+        hiddenNeuronGenes[hiddenNeuronGenes.size - 1] = n
+        val inConnection = SynapseGene(g!!.`in`, n, 1f)
+        val outConnection = SynapseGene(n, g!!.out, g!!.weight)
+        synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.size + 2)
+        synapseGenes[synapseGenes.size - 2] = inConnection
+        synapseGenes[synapseGenes.size - 1] = outConnection
+        g.isDisabled = (true)
+    }
 
-		outputNeuronGenes = new NeuronGene[numOutputs];
-		for (int i = 0; i < numOutputs; i++)
-			outputNeuronGenes[i] = new NeuronGene(nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation);
+    private fun getSynapseGeneIndex(`in`: NeuronGene?, out: NeuronGene?): Int {
+        for (i in 0 until synapseGenes.size - 2) {
+            if (synapseGenes[i]!!.`in` == `in` && synapseGenes[i]!!.out == out &&
+                !synapseGenes[i]!!.isDisabled
+            ) {
+                return i
+            }
+        }
+        return -1
+    }
 
-		hiddenNeuronGenes = new NeuronGene[0];
+    private fun mutateConnection(`in`: NeuronGene?, out: NeuronGene?) {
+        numMutations++
+        val geneIndex = getSynapseGeneIndex(`in`, out)
+        if (geneIndex == -1) {
+            synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.size + 1)
+            synapseGenes[synapseGenes.size - 1] = SynapseGene(`in`, out)
+        } else {
+            val g = synapseGenes[geneIndex]
+            if (random.nextBoolean()) createHiddenBetween(g) else synapseGenes[geneIndex] =
+                SynapseGene(`in`, out, SynapseGene.Companion.randomInitialWeight(), g!!.innovation)
+        }
+    }
 
-		synapseGenes = new SynapseGene[numInputs * numOutputs];
-		for (int i = 0; i < numInputs; i++)
-			for (int j = 0; j < numOutputs; j++) {
-				NeuronGene in = sensorNeuronGenes[i];
-				NeuronGene out = outputNeuronGenes[j];
-				synapseGenes[i*numOutputs + j] = new SynapseGene(in, out);
-			}
+    fun mutate() {
+        val i = random.nextInt(sensorNeuronGenes.size + hiddenNeuronGenes.size)
+        val `in`: NeuronGene?
+        val out: NeuronGene?
+        `in` = if (i < sensorNeuronGenes.size) sensorNeuronGenes[i] else hiddenNeuronGenes[i - sensorNeuronGenes.size]
+        val j = random.nextInt(hiddenNeuronGenes.size + outputNeuronGenes.size)
+        out = if (j < hiddenNeuronGenes.size) hiddenNeuronGenes[j] else outputNeuronGenes[j - hiddenNeuronGenes.size]
+        mutateConnection(`in`, out)
+    }
 
-		this.defaultActivation = defaultActivation;
-	}
+    fun crossover(other: NetworkGenome): NetworkGenome {
+        val myConnections = Arrays.stream(synapseGenes)
+            .collect(Collectors.toMap(
+                Function { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
+            )
+            )
+        val theirConnections = Arrays.stream(other.synapseGenes)
+            .collect(Collectors.toMap(
+                Function { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
+            )
+            )
+        val innovationNumbers: MutableSet<Int> = HashSet()
+        innovationNumbers.addAll(myConnections.keys)
+        innovationNumbers.addAll(theirConnections.keys)
+        val childSynapses = HashSet<SynapseGene?>()
+        for (innovation in innovationNumbers) {
+            val iContain = myConnections.containsKey(innovation)
+            val theyContain = theirConnections.containsKey(innovation)
+            var g: SynapseGene?
+            if (iContain && theyContain) {
+                g = if (Simulation.RANDOM.nextBoolean()) myConnections[innovation] else theirConnections[innovation]
+                if (g!!.isDisabled && Simulation.RANDOM.nextFloat() < Settings.globalMutationChance) g.isDisabled =
+                    false
+                childSynapses.add(g)
+                continue
+            } else if (iContain) {
+                g = myConnections[innovation]
+            } else {
+                g = theirConnections[innovation]
+            }
+            if (g!!.`in`!!.type == Neuron.Type.SENSOR || Simulation.RANDOM.nextBoolean()) childSynapses.add(g)
+        }
+        val childSynapseArray = childSynapses.toTypedArray()
 
-	public NetworkGenome(NeuronGene[] sensorGenes,
-						 NeuronGene[] outputGenes,
-						 NeuronGene[] hiddenGenes,
-						 SynapseGene[] synapseGenes,
-						 Neuron.Activation activation) {
-		this.sensorNeuronGenes = sensorGenes;
-		this.outputNeuronGenes = outputGenes;
-		this.hiddenNeuronGenes = hiddenGenes;
-		this.synapseGenes = synapseGenes;
-		this.defaultActivation = activation;
+        val neuronGenes = childSynapses.stream()
+            .flatMap { s: SynapseGene? -> Stream.of(s!!.`in`, s!!.out) }
+            .collect(Collectors.toSet())
 
-		nSensors = sensorGenes.length;
-		nOutputs = outputGenes.length;
-		nNeuronGenes = nSensors + nOutputs + hiddenGenes.length;
-	}
+        val childSensorGenes = neuronGenes.stream()
+            .filter { n: NeuronGene? -> n!!.type == Neuron.Type.SENSOR }
+            .sorted(Comparator.comparingInt { obj: NeuronGene? -> obj!!.id })
+            .toArray<NeuronGene?> { length -> arrayOfNulls(length) }
 
-	public void addSensor(String label) {
-		NeuronGene n = new NeuronGene(
-				nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR, label
-		);
+        val childOutputGenes = neuronGenes.stream()
+            .filter { n: NeuronGene? -> n!!.type == Neuron.Type.OUTPUT }
+            .sorted(Comparator.comparingInt { obj: NeuronGene? -> obj!!.id })
+            .toArray<NeuronGene?> { length -> arrayOfNulls(length) }
 
-		sensorNeuronGenes = Arrays.copyOf(sensorNeuronGenes, sensorNeuronGenes.length + 1);
-		sensorNeuronGenes[sensorNeuronGenes.length - 1] = n;
-		nSensors++;
+        val childHiddenGenes = neuronGenes.stream()
+            .filter { n: NeuronGene? -> n!!.type == Neuron.Type.HIDDEN }
+            .sorted(Comparator.comparingInt { obj: NeuronGene? -> obj!!.id })
+            .toArray<NeuronGene?> { length -> arrayOfNulls(length) }
 
-		int originalLen = synapseGenes.length;
-		synapseGenes = Arrays.copyOf(synapseGenes, originalLen + outputNeuronGenes.length);
-		for (int i = 0; i < outputNeuronGenes.length; i++)
-			synapseGenes[originalLen + i] = new SynapseGene(n, outputNeuronGenes[i]);
-	}
+        return NetworkGenome(
+            childSensorGenes,
+            childOutputGenes,
+            childHiddenGenes,
+            childSynapseArray,
+            defaultActivation
+        )
+    }
 
-	public void addOutput(String label) {
-		NeuronGene n = new NeuronGene(
-				nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation, label
-		);
+    private fun maxNeuronId(): Int {
+        var id = 0
+        for (g in sensorNeuronGenes) id = Math.max(g!!.id, id)
+        for (g in hiddenNeuronGenes) id = Math.max(g!!.id, id)
+        for (g in outputNeuronGenes) id = Math.max(g!!.id, id)
+        return id
+    }
 
-		outputNeuronGenes = Arrays.copyOf(outputNeuronGenes, outputNeuronGenes.length + 1);
-		outputNeuronGenes[outputNeuronGenes.length - 1] = n;
-		nOutputs++;
+    fun phenotype(): NeuralNetwork {
+        val neurons = arrayOfNulls<Neuron>(maxNeuronId() + 1)
+        for (g in sensorNeuronGenes) {
+            val inputs = arrayOfNulls<Neuron>(0)
+            val weights = FloatArray(0)
+            neurons[g!!.id] = Neuron(
+                g!!.id, inputs, weights, g!!.type, g!!.activation, g!!.label
+            )
+        }
+        val inputCounts = IntArray(neurons.size)
+        Arrays.fill(inputCounts, 0)
+        for (g in synapseGenes) inputCounts[g!!.out!!.id]++
+        for (i in 0 until hiddenNeuronGenes.size + outputNeuronGenes.size) {
+            var g: NeuronGene?
+            g = if (i < hiddenNeuronGenes.size) hiddenNeuronGenes[i] else outputNeuronGenes[i - hiddenNeuronGenes.size]
+            val inputs = arrayOfNulls<Neuron>(inputCounts[g!!.id])
+            val weights = FloatArray(inputCounts[g!!.id])
+            neurons[g!!.id] = Neuron(
+                g!!.id, inputs, weights, g!!.type, g!!.activation, g!!.label
+            )
+        }
+        Arrays.fill(inputCounts, 0)
+        for (g in synapseGenes) {
+            val i = inputCounts[g!!.out!!.id]++
+            neurons[g!!.out!!.id]!!.inputs[i] = neurons[g.`in`!!.id]
+            neurons[g!!.out!!.id]!!.weights[i] = g!!.weight
+        }
+        return NeuralNetwork(neurons)
+    }
 
-		int originalLen = synapseGenes.length;
-		synapseGenes = Arrays.copyOf(synapseGenes, originalLen + sensorNeuronGenes.length);
-		for (int i = 0; i < sensorNeuronGenes.length; i++)
-			synapseGenes[originalLen + i] = new SynapseGene(sensorNeuronGenes[i], n);
-	}
-
-	private void createHiddenBetween(SynapseGene g) {
-
-		NeuronGene n = new NeuronGene(
-			nNeuronGenes++, Neuron.Type.HIDDEN, defaultActivation
-		);
-
-		hiddenNeuronGenes = Arrays.copyOf(hiddenNeuronGenes, hiddenNeuronGenes.length + 1);
-		hiddenNeuronGenes[hiddenNeuronGenes.length - 1] = n;
-
-		SynapseGene inConnection = new SynapseGene(g.getIn(), n, 1f);
-		SynapseGene outConnection = new SynapseGene(n, g.getOut(), g.getWeight());
-
-		synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.length + 2);
-		synapseGenes[synapseGenes.length - 2] = inConnection;
-		synapseGenes[synapseGenes.length - 1] = outConnection;
-
-		g.setDisabled(true);
-	}
-
-	private int getSynapseGeneIndex(NeuronGene in, NeuronGene out) {
-
-		for (int i = 0; i < synapseGenes.length - 2; i++) {
-			if (synapseGenes[i].getIn().equals(in) &&
-					synapseGenes[i].getOut().equals(out) &&
-					!synapseGenes[i].isDisabled()) {
-				return i;
-			}
-		}
-		return -1;
-	}
-	
-	private void mutateConnection(NeuronGene in, NeuronGene out) {
-		numMutations++;
-
-		int geneIndex = getSynapseGeneIndex(in, out);
-
-		if (geneIndex == -1) {
-			synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.length + 1);
-			synapseGenes[synapseGenes.length - 1] = new SynapseGene(in, out);
-		} else {
-			SynapseGene g = synapseGenes[geneIndex];
-			if (random.nextBoolean())
-				createHiddenBetween(g);
-			else
-				synapseGenes[geneIndex] = new SynapseGene(in, out, SynapseGene.randomInitialWeight(), g.getInnovation());
-		}
-	}
-	
-	public void mutate()
-	{
-		int i = random.nextInt(sensorNeuronGenes.length + hiddenNeuronGenes.length);
-		NeuronGene in, out;
-		if (i < sensorNeuronGenes.length)
-			in = sensorNeuronGenes[i];
-		else in = hiddenNeuronGenes[i - sensorNeuronGenes.length];
-
-		int j = random.nextInt(hiddenNeuronGenes.length + outputNeuronGenes.length);
-		if (j < hiddenNeuronGenes.length)
-			out = hiddenNeuronGenes[j];
-		else out = outputNeuronGenes[j - hiddenNeuronGenes.length];
-
-		mutateConnection(in, out);
-	}
-	
-	public NetworkGenome crossover(NetworkGenome other)
-	{
-		Map<Integer, SynapseGene> myConnections = Arrays.stream(synapseGenes)
-				.collect(Collectors.toMap(SynapseGene::getInnovation, Function.identity()));
-		Map<Integer, SynapseGene> theirConnections = Arrays.stream(other.synapseGenes)
-				.collect(Collectors.toMap(SynapseGene::getInnovation, Function.identity()));
-
-		Set<Integer> innovationNumbers = new HashSet<>();
-		innovationNumbers.addAll(myConnections.keySet());
-		innovationNumbers.addAll(theirConnections.keySet());
-
-		HashSet<SynapseGene> childSynapses = new HashSet<>();
-
-		for (int innovation : innovationNumbers) {
-			boolean iContain = myConnections.containsKey(innovation);
-			boolean theyContain = theirConnections.containsKey(innovation);
-			SynapseGene g;
-			if (iContain && theyContain) {
-				g = Simulation.RANDOM.nextBoolean() ?
-						myConnections.get(innovation) :
-						theirConnections.get(innovation);
-				if (g.isDisabled() && Simulation.RANDOM.nextFloat() < Settings.globalMutationChance)
-					g.setDisabled(false);
-				childSynapses.add(g);
-				continue;
-
-			} else if (iContain) {
-				g = myConnections.get(innovation);
-			} else {
-				g = theirConnections.get(innovation);
-			}
-
-			if (g.getIn().getType().equals(Neuron.Type.SENSOR) || Simulation.RANDOM.nextBoolean())
-				childSynapses.add(g);
-		}
-
-		SynapseGene[] childSynapseArray = childSynapses.toArray(new SynapseGene[0]);
-
-		Set<NeuronGene> neuronGenes = childSynapses.stream()
-				.flatMap(s -> Stream.of(s.getIn(), s.getOut()))
-				.collect(Collectors.toSet());
-
-		NeuronGene[] childSensorGenes = neuronGenes.stream()
-				.filter(n -> n.getType().equals(Neuron.Type.SENSOR))
-				.sorted(Comparator.comparingInt(NeuronGene::getId))
-				.toArray(NeuronGene[]::new);
-
-		NeuronGene[] childOutputGenes = neuronGenes.stream()
-				.filter(n -> n.getType().equals(Neuron.Type.OUTPUT))
-				.sorted(Comparator.comparingInt(NeuronGene::getId))
-				.toArray(NeuronGene[]::new);
-
-		NeuronGene[] childHiddenGenes = neuronGenes.stream()
-				.filter(n -> n.getType().equals(Neuron.Type.HIDDEN))
-				.sorted(Comparator.comparingInt(NeuronGene::getId))
-				.toArray(NeuronGene[]::new);
-
-		return new NetworkGenome(
-				childSensorGenes,
-				childOutputGenes,
-				childHiddenGenes,
-				childSynapseArray,
-				defaultActivation
-		);
-	}
-
-	private int maxNeuronId() {
-		int id = 0;
-		for (NeuronGene g : sensorNeuronGenes)
-			id = Math.max(g.getId(), id);
-		for (NeuronGene g : hiddenNeuronGenes)
-			id = Math.max(g.getId(), id);
-		for (NeuronGene g : outputNeuronGenes)
-			id = Math.max(g.getId(), id);
-		return id;
-	}
-
-	public NeuralNetwork phenotype()
-	{
-
-		Neuron[] neurons = new Neuron[maxNeuronId() + 1];
-
-		for (NeuronGene g : sensorNeuronGenes) {
-
-			Neuron[] inputs = new Neuron[0];
-			float[] weights = new float[0];
-
-			neurons[g.getId()] = new Neuron(
-					g.getId(), inputs, weights, g.getType(), g.getActivation(), g.getLabel()
-			);
-		}
-
-		int[] inputCounts = new int[neurons.length];
-		Arrays.fill(inputCounts, 0);
-
-		for (SynapseGene g : synapseGenes)
-			inputCounts[g.getOut().getId()]++;
-
-		for (int i = 0; i < hiddenNeuronGenes.length + outputNeuronGenes.length; i++) {
-			NeuronGene g;
-			if (i < hiddenNeuronGenes.length)
-				g = hiddenNeuronGenes[i];
-			else g = outputNeuronGenes[i - hiddenNeuronGenes.length];
-
-			Neuron[] inputs = new Neuron[inputCounts[g.getId()]];
-			float[] weights = new float[inputCounts[g.getId()]];
-
-			neurons[g.getId()] = new Neuron(
-					g.getId(), inputs, weights, g.getType(), g.getActivation(), g.getLabel()
-			);
-		}
-
-		Arrays.fill(inputCounts, 0);
-		for (SynapseGene g : synapseGenes) {
-			int i = inputCounts[g.getOut().getId()]++;
-			neurons[g.getOut().getId()].getInputs()[i] = neurons[g.getIn().getId()];
-			neurons[g.getOut().getId()].getWeights()[i] = g.getWeight();
-		}
-
-		return new NeuralNetwork(neurons);
-	}
-
-	public float distance(NetworkGenome other)
-	{
+    fun distance(other: NetworkGenome?): Float {
 //		int excess = 0;
 //		int disjoint = 0;
-		return 0;
-	}
+        return 0f
+    }
 
-	public String toString()
-	{
-		StringBuilder str = new StringBuilder();
-		for (NeuronGene gene : sensorNeuronGenes)
-			str.append(gene.toString()).append("\n");
-		for (NeuronGene gene : hiddenNeuronGenes)
-			str.append(gene.toString()).append("\n");
-		for (NeuronGene gene : outputNeuronGenes)
-			str.append(gene.toString()).append("\n");
-		for (SynapseGene gene : synapseGenes)
-			str.append(gene.toString()).append("\n");
-		return str.toString();
-	}
+    override fun toString(): String {
+        val str = StringBuilder()
+        for (gene in sensorNeuronGenes) str.append(gene.toString()).append("\n")
+        for (gene in hiddenNeuronGenes) str.append(gene.toString()).append("\n")
+        for (gene in outputNeuronGenes) str.append(gene.toString()).append("\n")
+        for (gene in synapseGenes) str.append(gene.toString()).append("\n")
+        return str.toString()
+    }
 
-	public SynapseGene[] getSynapseGenes() {
-		return synapseGenes;
-	}
+    fun numberOfSensors(): Int {
+        return nSensors
+    }
 
-	public int getNumMutations() {
-		return numMutations;
-	}
+    fun hasSensor(label: String): Boolean {
+        for (gene in sensorNeuronGenes) if (gene!!.label == label) return true
+        return false
+    }
 
-	public int numberOfSensors() {
-		return nSensors;
-	}
+    fun ensureRetinaSensorsExist(retinaSize: Int) {
+        for (i in 0 until retinaSize) {
+            val label = Retina.retinaCellLabel(i)
+            if (!hasSensor("$label R")) addSensor("$label R")
+            if (!hasSensor("$label G")) addSensor("$label G")
+            if (!hasSensor("$label B")) addSensor("$label B")
+        }
+    }
 
-	public boolean hasSensor(String label) {
-		for (NeuronGene gene : sensorNeuronGenes)
-			if (gene.getLabel().equals(label))
-				return true;
-		return false;
-	}
-
-	public void ensureRetinaSensorsExist(int retinaSize) {
-		for (int i = 0; i < retinaSize; i++) {
-			String label = Retina.retinaCellLabel(i);
-			if (!hasSensor(label + " R"))
-				addSensor(label + " R");
-			if (!hasSensor(label + " G"))
-				addSensor(label + " G");
-			if (!hasSensor(label + " B"))
-				addSensor(label + " B");
-		}
-	}
+    companion object {
+        const val serialVersionUID = 6145947068527764820L
+    }
 }

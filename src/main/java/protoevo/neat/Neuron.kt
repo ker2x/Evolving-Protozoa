@@ -1,176 +1,104 @@
-package protoevo.neat;
+package protoevo.neat
 
-import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.Comparator;
-import java.util.function.Function;
+import java.io.Serializable
+import java.util.function.Function
+import kotlin.math.exp
+import kotlin.math.tanh
 
 /**
  * Created by dylan on 26/05/2017.
  */
-public class Neuron implements Comparable<Neuron>, Serializable {
+class Neuron(
+    val id: Int,
+    val inputs: Array<Neuron?>,
+    val weights: FloatArray,
+    var type: Type?,
+    private var activation: (Float) -> Float,
+    val label: String?
+) : Comparable<Neuron>, Serializable {
 
-    public interface Activation extends Function<Float, Float>, Serializable {
-        Activation SIGMOID = z -> 1 / (1 + (float) Math.exp(-z));
-        Activation LINEAR = z -> z;
-        Activation TANH = x -> (float) Math.tanh(x);
+    interface Activation : Function<Float, Float>, Serializable {
+        companion object {
+            val SIGMOID = fun(z: Float): Float { return 1 / (1 + exp(-z)) }
+            val LINEAR = fun(z: Float): Float { return z }
+            val TANH = fun(x: Float): Float  { return tanh(x) }
+        }
     }
 
-    public enum Type implements Serializable {
+
+
+    enum class Type(private val value: String) : Serializable {
         SENSOR("SENSOR"), HIDDEN("HIDDEN"), OUTPUT("OUTPUT");
 
-        private final String value;
-        Type(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return value;
+        override fun toString(): String {
+            return value
         }
     }
 
-    private static final long serialVersionUID = 1L;
+    var state = 0f
+    var lastState = 0f
+        private set
+    private var nextState :Float = 0f
+    private var learningRate = 0f
+    var depth = -1
+    var graphicsX = -1
+        private set
+    var graphicsY = -1
+        private set
+    var isConnectedToOutput = true
 
-    private final Neuron[] inputs;
-    private final float[] weights;
-    private Type type;
-    private final int id;
-    private float state = 0, lastState = 0, nextState = 0;
-    private float learningRate = 0;
-    private Activation activation;
-    private int depth = -1;
-    private int graphicsX = -1, graphicsY = -1;
-    private boolean connectedToOutput = true;
-    private final String label;
-
-    public Neuron(int id, Neuron[] inputs, float[] weights, Type type, Activation activation, String label)
-    {
-        this.id = id;
-        this.inputs = inputs;
-        this.weights = weights;
-        this.type = type;
-        this.activation = activation;
-        this.label = label;
-
-        if (type.equals(Type.OUTPUT))
-            connectedToOutput = true;
+    init {
+        if (type == Type.OUTPUT) isConnectedToOutput = true
     }
 
-    void tick()
-    {
-        nextState = 0.0f;
-        for (int i = 0; i < inputs.length; i++)
-            nextState += inputs[i].getState() * weights[i];
-        nextState = activation.apply(nextState);
+    fun tick() {
+        nextState = 0.0f
+        for (i in inputs.indices) nextState += inputs[i]!!.state * weights[i]
+        nextState = activation.invoke(nextState)
     }
 
-    void update()
-    {
-        lastState = state;
-        state = nextState;
+    fun update() {
+        lastState = state
+        state = nextState
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof Neuron)
-            return ((Neuron) o).getId() == id;
-        return false;
+    override fun equals(o: Any?): Boolean {
+        return if (o is Neuron) o.id == id else false
     }
 
-    public int getId() {
-        return id;
+    fun setState(s: Float): Neuron {
+        state = s
+        return this
     }
 
-    public float getState() {
-        return state;
+    fun setActivation(activation: (Float) -> Float): Neuron {
+        this.activation = activation
+        return this
     }
 
-    public float getLastState() {
-        return lastState;
+    private fun setLearningRate(lr: Float): Neuron {
+        learningRate = lr
+        return this
     }
 
-    public Neuron setState(float s) {
-        state = s;
-        return this;
+    override fun compareTo(o: Neuron): Int {
+        return Comparator.comparingInt { obj: Neuron -> obj.id }.compare(this, o)
     }
 
-    public Neuron setActivation(Neuron.Activation activation) {
-        this.activation = activation;
-        return this;
+    override fun toString(): String {
+        val s = StringBuilder(String.format("id:%d, state:%.1f", id, state))
+        s.append(", connections: [")
+        for (i in weights.indices) s.append(String.format("(%d, %.1f)", i, weights[i]))
+        s.append("]")
+        return s.toString()
     }
 
-    public Neuron[] getInputs() {
-        return inputs;
+    fun setGraphicsPosition(x: Int, y: Int) {
+        graphicsX = x
+        graphicsY = y
     }
 
-    public float[] getWeights() {
-        return weights;
-    }
-
-    private float getLearningRate() {
-        return learningRate;
-    }
-
-    private Neuron setLearningRate(float lr) {
-        this.learningRate = lr;
-        return this;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public void setType(Type type) {
-        this.type = type;
-    }
-
-    @Override
-    public int compareTo(Neuron o) {
-        return Comparator.comparingInt(Neuron::getId).compare(this, o);
-    }
-
-    @Override
-    public String toString()
-    {
-        StringBuilder s = new StringBuilder(String.format("id:%d, state:%.1f", id, state));
-        s.append(", connections: [");
-        for (int i = 0; i < weights.length; i++)
-            s.append(String.format("(%d, %.1f)", i, weights[i]));
-        s.append("]");
-        return s.toString();
-    }
-
-    public void setDepth(int depth) {
-        this.depth = depth;
-    }
-
-    public int getDepth() {
-        return depth;
-    }
-
-    public boolean isConnectedToOutput() {
-        return connectedToOutput;
-    }
-
-    public void setConnectedToOutput(boolean connectedToOutput) {
-        this.connectedToOutput = connectedToOutput;
-    }
-
-    public void setGraphicsPosition(int x, int y) {
-        graphicsX = x;
-        graphicsY = y;
-    }
-
-    public int getGraphicsX() {
-        return graphicsX;
-    }
-
-    public int getGraphicsY() {
-        return graphicsY;
-    }
-
-    public String getLabel() {
-        return label;
+    companion object {
+        private const val serialVersionUID = 1L
     }
 }
