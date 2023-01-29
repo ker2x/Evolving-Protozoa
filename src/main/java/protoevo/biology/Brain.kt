@@ -1,82 +1,68 @@
-package protoevo.biology;
+package protoevo.biology
 
-import protoevo.core.Settings;
-import protoevo.core.Simulation;
+import protoevo.core.Settings
+import protoevo.core.Simulation
+import java.io.Serializable
 
-import java.io.Serializable;
+interface Brain : Serializable {
+    fun tick(p: Protozoan?)
+    fun turn(p: Protozoan?): Float
+    fun speed(p: Protozoan?): Float
+    fun attack(p: Protozoan?): Float
+    fun wantToMateWith(p: Protozoan?): Boolean
+    fun energyConsumption(): Float
 
-public interface Brain extends Serializable
-{
-	void tick(Protozoan p);
-	float turn(Protozoan p);
-	float speed(Protozoan p);
-	float attack(Protozoan p);
-	boolean wantToMateWith(Protozoan p);
-	float energyConsumption();
-	
-	Brain RANDOM = new Brain()
-	{
-		private static final long serialVersionUID = 1648484737904226314L;
+    companion object {
 
-		@Override
-		public void tick(Protozoan p) {}
+        @JvmField
+        public final val RANDOM: Brain = object : Brain {
+            val serialVersionUID = 1648484737904226314L
+            override fun tick(p: Protozoan?) {}
+            override fun turn(p: Protozoan?): Float {
+                val x = (2 * Simulation.RANDOM.nextDouble() - 1).toFloat()
+                val t = Math.toRadians(35.0).toFloat()
+                return t * x
+            }
 
-		@Override
-		public float turn(Protozoan p) {
-			float x = (float) (2* Simulation.RANDOM.nextDouble() - 1);
-			float t = (float) Math.toRadians(35);
-			return t * x;
-		}
+            override fun speed(p: Protozoan?): Float {
+                return (Simulation.RANDOM.nextDouble() * Settings.maxProtozoaSpeed).toFloat()
+            }
 
-		@Override
-		public float speed(Protozoan p) {
-			return (float) (Simulation.RANDOM.nextDouble() * Settings.maxProtozoaSpeed);
-		}
+            override fun attack(p: Protozoan?): Float {
+                return Simulation.RANDOM.nextFloat()
+            }
 
-		@Override
-		public float attack(Protozoan p) {
-			return Simulation.RANDOM.nextFloat();
-		}
+            override fun wantToMateWith(p: Protozoan?): Boolean {
+                return false
+            }
 
-		@Override
-		public boolean wantToMateWith(Protozoan p) {
-			return false;
-		}
+            override fun energyConsumption(): Float {
+                return 0f
+            }
+        }
 
-		@Override
-		public float energyConsumption() {
-			return 0;
-		}
-		
-	};
+        @JvmField
+        public final val EMPTY: Brain = object : Brain {
+            override fun tick(p: Protozoan?) {}
+            override fun turn(p: Protozoan?): Float {
+                return 0f
+            }
 
-	Brain EMPTY = new Brain() {
-		@Override
-		public void tick(Protozoan p) {}
+            override fun speed(p: Protozoan?): Float {
+                return 0f
+            }
 
-		@Override
-		public float turn(Protozoan p) {
-			return 0;
-		}
+            override fun attack(p: Protozoan?): Float {
+                return 0f
+            }
 
-		@Override
-		public float speed(Protozoan p) {
-			return 0;
-		}
+            override fun wantToMateWith(p: Protozoan?): Boolean {
+                return false
+            }
 
-		@Override
-		public float attack(Protozoan p) {
-			return 0;
-		}
-
-		@Override
-		public boolean wantToMateWith(Protozoan p) {
-			return false;
-		}
-
-		@Override
-		public float energyConsumption() {
-			return 0;
-		}
-	};
+            override fun energyConsumption(): Float {
+                return 0f
+            }
+        }
+    }
 }
