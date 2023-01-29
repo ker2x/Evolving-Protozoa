@@ -30,7 +30,7 @@ class Chemical : Serializable {
     }
 
     private fun sigmoid(z: Float): Float {
-        return 1 / (1 + exp(-z.toDouble()).toFloat())
+        return 1 / (1 + exp(-z))
     }
 
     fun pheromoneFlow(other: Chemical): Float {

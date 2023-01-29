@@ -16,7 +16,6 @@ class NetworkGenome : Serializable {
     private lateinit var hiddenNeuronGenes: Array<NeuronGene?>
     private var nNeuronGenes = 0
     private lateinit var synapseGenes: Array<SynapseGene?>
-        private set
     private var random = Simulation.RANDOM
     private var mutationChance = Settings.globalMutationChance
     private var defaultActivation = Neuron.LINEAR

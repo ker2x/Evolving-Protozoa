@@ -29,7 +29,6 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
     private var superSimpleRender = false
     private var renderChemicals = true
     private var isAdvancedDebugInfo = false
-        private set
     private val rotate = 0f
     private var lastFPSTime = 0.0
     private var framesRendered = 0
