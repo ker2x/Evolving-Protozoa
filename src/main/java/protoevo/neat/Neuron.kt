@@ -1,7 +1,6 @@
 package protoevo.neat
 
 import java.io.Serializable
-import java.util.function.Function
 import kotlin.math.exp
 import kotlin.math.tanh
 
@@ -17,15 +16,13 @@ class Neuron(
     val label: String?
 ) : Comparable<Neuron>, Serializable {
 
-    interface Activation : Function<Float, Float>, Serializable {
+    interface Activation : (Float) -> Float , Serializable {
         companion object {
-            val SIGMOID = fun(z: Float): Float { return 1 / (1 + exp(-z)) }
-            val LINEAR = fun(z: Float): Float { return z }
-            val TANH = fun(x: Float): Float  { return tanh(x) }
+            val SIGMOID = fun(z: Float): Float  { return 1 / (1 + exp(-z)) }
+            val LINEAR  = fun(z: Float): Float  { return z }
+            val TANH    = fun(x: Float): Float  { return tanh(x) }
         }
     }
-
-
 
     enum class Type(private val value: String) : Serializable {
         SENSOR("SENSOR"), HIDDEN("HIDDEN"), OUTPUT("OUTPUT");
@@ -54,7 +51,7 @@ class Neuron(
     fun tick() {
         nextState = 0.0f
         for (i in inputs.indices) nextState += inputs[i]!!.state * weights[i]
-        nextState = activation.invoke(nextState)
+        nextState = activation(nextState)
     }
 
     fun update() {
