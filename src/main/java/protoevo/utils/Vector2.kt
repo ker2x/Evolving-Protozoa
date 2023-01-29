@@ -140,6 +140,12 @@ class Vector2(x: Float, y: Float) : Serializable {
         return this
     }
 
+    override fun hashCode(): Int {
+        var result = x.hashCode()
+        result = 31 * result + y.hashCode()
+        return result
+    }
+
     companion object {
         @JvmField
         val ZERO = Vector2(0f, 0f)
