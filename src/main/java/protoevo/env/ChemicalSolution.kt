@@ -57,7 +57,7 @@ class ChemicalSolution(
             val i = toChemicalGridX(e.pos!!.x)
             val j = toChemicalGridY(e.pos!!.y)
             val k = Settings.plantPheromoneDeposit
-            chemicalGrid[i][j]!!.currentPlantPheromoneDensity += delta * k * e.radius * e.getHealth()
+            chemicalGrid[i][j]!!.currentPlantPheromoneDensity += delta * k * e.getRadius() * e.getHealth()
         }
     }
 

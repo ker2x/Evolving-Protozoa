@@ -49,7 +49,7 @@ class Controller(private val input: Input, private val simulation: Simulation, p
                 if (isPosInChunk(pos, chunk)) {
                     for (e in chunk!!.cells) {
                         val s = renderer.toRenderSpace(e!!.pos)
-                        val r: Double = renderer.toRenderSpace(e.radius).toDouble()
+                        val r: Double = renderer.toRenderSpace(e.getRadius()).toDouble()
                         if (s.sub(pos).len2() < r * r) {
                             renderer.track(e)
                             track = true

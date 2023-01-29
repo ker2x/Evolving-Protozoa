@@ -20,7 +20,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     private var prevPos: Vector2? = null
     private var vel: Vector2? = null
     private val acc = Vector2(0f, 0f)
-    private var radius = 0f
+    private var _radius = 0f
 
     var recentRigidCollisions = 0
         private set
@@ -37,7 +37,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
 
     open fun physicsStep(delta: Float) {
         val chunkManager = tank.chunkManager
-        val entities = chunkManager.broadCollisionDetection(pos!!, radius)
+        val entities = chunkManager.broadCollisionDetection(pos!!, _radius)
         entities.forEachRemaining { o: Collidable? -> handlePotentialCollision(o, delta) }
         if (prevPos == null) prevPos = pos!!.copy()
         vel = if (delta != 0f) pos!!.sub(prevPos!!).scale(1 / delta) else return
@@ -58,8 +58,8 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
         val targetDist = 1.1f * (getRadius() + attached.getRadius())
         val offset = targetDist - dist
         val axisNorm = axis.unit()
-        val myMass = mass
-        val theirMass = attached.mass
+        val myMass = getMass()
+        val theirMass = attached.getMass()
         val p = myMass / (myMass + theirMass)
         pos!!.translate(axisNorm.mul((1 - p) * offset))
         attached.pos!!.translate(axisNorm.mul(-p * offset))
@@ -116,7 +116,7 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     open fun onParticleCollisionCallback(p: Particle?, delta: Float) {}
     private val tmp1 = Vector2(0f, 0f)
     private fun handleParticleCollision(p: Particle, delta: Float) {
-        val mr = p.mass / (p.mass + mass)
+        val mr = p.getMass() / (p.getMass() + getMass())
         val axis = tmp1.set(pos!!).take(p.pos!!)
         val dist = axis.len()
         val targetDist = getRadius() + p.getRadius()
@@ -191,8 +191,8 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     val speed: Float
         get() = if (vel == null) 0f else vel!!.len()
 
-    open val mass: Float
-        get() = getMass(getRadius())
+//    open val mass: Float
+//        get() = getMass(getRadius())
 
 
     fun getMass(r: Float): Float {
@@ -214,18 +214,25 @@ open class Particle(@JvmField val tank: Tank) : Collidable(), Serializable {
     }
 
     fun getRadius(): Float {
-        return radius
+        return _radius
     }
 
     fun setRadius(radius: Float) {
-        this.radius = radius
-        if (this.radius > Settings.maxParticleRadius) this.radius = Settings.maxParticleRadius
-        if (this.radius < Settings.minParticleRadius) this.radius = Settings.minParticleRadius
+        this._radius = radius
+        if (this._radius > Settings.maxParticleRadius) this._radius = Settings.maxParticleRadius
+        if (this._radius < Settings.minParticleRadius) this._radius = Settings.minParticleRadius
     }
 
     override fun getColor(): Color? {
         return Color.WHITE.darker()
     }
+
+    override fun getMass(): Float {
+        return getMass(getRadius())
+    }
+
+
+
 
     companion object {
         private const val serialVersionUID = -4333766895269415282L

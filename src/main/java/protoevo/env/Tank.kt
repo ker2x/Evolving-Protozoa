@@ -150,8 +150,8 @@ class Tank : Iterable<Cell?>, Serializable {
 
     fun handleTankEdge(e: Cell) {
         val rPos = e.pos!!.len()
-        if (Settings.sphericalTank && rPos - e.radius > radius) e.pos!!.setLength(-0.98f * radius) else if (rPos + e.radius > radius) {
-            e.pos!!.setLength(radius - e.radius)
+        if (Settings.sphericalTank && rPos - e.getRadius() > radius) e.pos!!.setLength(-0.98f * radius) else if (rPos + e.getRadius() > radius) {
+            e.pos!!.setLength(radius - e.getRadius())
             val normal = e.pos!!.unit().scale(-1f)
             e.getVel().translate(normal.mul(-2 * normal.dot(e.getVel())))
         }
@@ -197,7 +197,7 @@ class Tank : Iterable<Cell?>, Serializable {
     }
 
     private fun handleDeadEntities(e: Cell) {
-        if (!e.isDead) return
+        if (!e.isDead()) return
         e.handleDeath()
     }
 
@@ -247,20 +247,20 @@ class Tank : Iterable<Cell?>, Serializable {
                 .map { cell: Cell -> cell as Protozoan }
                 .collect(Collectors.toSet())
             for (e in protozoa) {
-                for ((key1, value) in e.stats) {
+                for ((key1, value) in e!!.getStats()!!) {
                     val key = "Sum $key1"
                     val currentValue = stats.getOrDefault(key, 0f)
-                    stats[key] = value + currentValue
+                    stats[key] = value!! + currentValue
                 }
             }
             val numProtozoa = protozoa.size
             for (e in protozoa) {
-                for ((key, value) in e.stats) {
+                for ((key, value) in e!!.getStats()!!) {
                     val sumValue = stats.getOrDefault("Sum $key", 0f)
                     val mean = sumValue / numProtozoa
                     stats["Mean $key"] = mean
                     val currVar = stats.getOrDefault("Var $key", 0f)
-                    val deltaVar = Math.pow((value - mean).toDouble(), 2.0).toFloat() / numProtozoa
+                    val deltaVar = Math.pow((value!! - mean).toDouble(), 2.0).toFloat() / numProtozoa
                     stats["Var $key"] = currVar + deltaVar
                 }
             }
@@ -289,7 +289,7 @@ class Tank : Iterable<Cell?>, Serializable {
 
     fun addRandom(e: Cell, findPosition: Function<Float, Vector2>) {
         for (i in 0..4) {
-            e.pos = findPosition.apply(e.radius)
+            e.pos = findPosition.apply(e.getRadius())
             if (!isCollidingWithAnything(e)) {
                 add(e)
                 return

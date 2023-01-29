@@ -17,7 +17,7 @@ public class MeatCell extends EdibleCell {
         int r = 150 + Simulation.RANDOM.nextInt(105);
         int g = 25  + Simulation.RANDOM.nextInt(100);
         int b = 25  + Simulation.RANDOM.nextInt(100);
-        setHealthyColour(new Color(r, g, b));
+        healthyColour = new Color(r, g, b);
         setDegradedColour(new Color(158, 121, 79));
     }
 

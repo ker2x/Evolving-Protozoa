@@ -111,7 +111,7 @@ class ChunkManager(
 
     fun update() {
         for (chunk in chunks) chunk!!.clear()
-        entities.removeIf { obj: Cell -> obj.isDead }
+        entities.removeIf { obj: Cell -> obj.isDead() }
         entities.forEach(Consumer { e: Cell -> this.allocateToChunk(e) })
     }
 

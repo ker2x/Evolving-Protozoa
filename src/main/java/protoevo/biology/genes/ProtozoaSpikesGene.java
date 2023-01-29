@@ -36,7 +36,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
         Protozoan.Spike[] spikes = getValue();
         StringBuilder str = new StringBuilder(spikes.length + ";");
         for (Protozoan.Spike spike : spikes)
-            str.append(spike.currentLength).append(";").append(spike.angle).append(";").append(spike.growthRate);
+            str.append(spike.currentLength).append(";").append(spike.angle).append(";").append(spike.hidden_growthRate);
         return str.toString();
     }
 
@@ -68,7 +68,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
         float radius = getProtozoaMaxRadius(genome);
         spike.length = randomSpikeLength(radius);
         spike.angle = randomAngle();
-        spike.growthRate = randomSpikeGrowthRate();
+        spike.hidden_growthRate = randomSpikeGrowthRate();
         newSpikes[spikes.length] = spike;
 
         return createNew(newSpikes, getNumMutations() + 1);
@@ -103,7 +103,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
             float radius = getProtozoaMaxRadius(genome);
             newSpike.length = randomSpikeLength(radius);
         } else {
-            newSpike.growthRate = randomSpikeGrowthRate();
+            newSpike.hidden_growthRate = randomSpikeGrowthRate();
         }
         newSpikes[idx] = newSpike;
 
@@ -133,7 +133,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
             Protozoan.Spike newSpike = new Protozoan.Spike();
             newSpike.angle = spikes[i].angle + theta;
             newSpike.length = spikes[i].length;
-            newSpike.growthRate = spikes[i].growthRate;
+            newSpike.hidden_growthRate = spikes[i].hidden_growthRate;
             newSpikes[i] = newSpike;
         }
 

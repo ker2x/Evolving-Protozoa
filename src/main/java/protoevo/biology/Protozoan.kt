@@ -9,7 +9,6 @@ import protoevo.core.Settings
 import protoevo.core.Simulation
 import protoevo.env.Tank
 import protoevo.utils.Vector2
-import java.awt.Color
 import java.io.Serializable
 import kotlin.math.pow
 
@@ -39,12 +38,12 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         @JvmField
 		var angle = 0f
         @JvmField
-		var growthRate = 0f
+		var hidden_growthRate = 0f
         @JvmField
 		var currentLength = 0f
         fun update(delta: Float) {
             if (currentLength < length) {
-                currentLength = Math.min(currentLength + delta * growthRate, length)
+                currentLength = Math.min(currentLength + delta * hidden_growthRate, length)
             }
         }
 
@@ -80,7 +79,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     constructor(tank: Tank?) : this(ProtozoaGenome(), tank)
 
     fun getSensorPosition(sensor: ContactSensor?): Vector2 {
-        return pos!!.add(dir.rotate(sensor!!.angle).setLength(1.01f * radius))
+        return pos!!.add(dir.rotate(sensor!!.angle).setLength(1.01f * getRadius()))
     }
 
     override fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean {
@@ -93,6 +92,9 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         }
         return super.handlePotentialCollision(other, delta)
     }
+
+    override val prettyName: String?
+        get() = "Protozoan"
 
     fun cullFromRayCasting(o: Collidable?): Boolean {
         if (o is Particle) {
@@ -118,7 +120,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         retina = genome.retina()
         spikes = genome.spikes
         herbivoreFactor = genome.herbivoreFactor
-        radius = (genome.radius)
+        setRadius(genome.radius)
         healthyColour = genome.colour
         growthRate = genome.growthRate
         splitRadius = genome.splitRadius
@@ -175,18 +177,18 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         } else if (e is MeatCell) {
             extraction /= herbivoreFactor
         }
-        extractFood(e, extraction * delta)
+        extractFood(e!!, extraction * delta)
     }
 
     private fun damage(damage: Float) {
         wasJustDamaged = true
-        health = health - damage
+        _health = _health - damage
     }
 
     private fun attack(p: Protozoan, spike: Spike, delta: Float) {
         val myAttack =
-            (2 * health + Settings.spikeDamage * getSpikeLength(spike) + 2 * Simulation.RANDOM.nextDouble()).toFloat()
-        val theirDefense: Float = (2 * p.health + 0.3 * p.radius + 2 * Simulation.RANDOM.nextDouble()).toFloat()
+            (2 * _health + Settings.spikeDamage * getSpikeLength(spike) + 2 * Simulation.RANDOM.nextDouble()).toFloat()
+        val theirDefense: Float = (2 * p._health + 0.3 * p.getRadius() + 2 * Simulation.RANDOM.nextDouble()).toFloat()
         if (myAttack > p.shieldFactor * theirDefense) p.damage(delta * attackFactor * (myAttack - p.shieldFactor * theirDefense))
     }
 
@@ -194,10 +196,10 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         brain.tick(this)
         dir.turn(delta * 80 * brain.turn(this))
         val spikeDecay = Math.pow(Settings.spikeMovementPenaltyFactor.toDouble(), spikes.size.toDouble()).toFloat()
-        val sizePenalty: Float = radius / splitRadius // smaller flagella generate less impulse
+        val sizePenalty: Float = getRadius() / splitRadius // smaller flagella generate less impulse
         val speed = Math.abs(brain.speed(this))
         val vel = dir.mul(sizePenalty * spikeDecay * speed)
-        val work = .5f * mass * vel.len2()
+        val work = .5f * _mass * vel.len2()
         if (enoughEnergyAvailable(work)) {
             useEnergy(work)
             pos!!.translate(vel.scale(delta))
@@ -205,20 +207,20 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     }
 
     private fun shouldSplit(): Boolean {
-        return radius > splitRadius && health > Settings.minHealthToSplit
+        return getRadius() > splitRadius && _health > Settings.minHealthToSplit
     }
 
     @Throws(MiscarriageException::class)
     private fun createSplitChild(r: Float): Protozoan {
-        val stuntingFactor: Float = r / radius
+        val stuntingFactor: Float = r / getRadius()
         val child = genome.createChild(tank, crossOverGenome)
-        child.radius = (stuntingFactor * child.radius)
+        child.setRadius(stuntingFactor * child.getRadius())
         return child
     }
 
     private fun interact(other: Collidable, delta: Float) {
         if (other === this) return
-        if (isDead) {
+        if (isDead()) {
             handleDeath()
             return
         }
@@ -230,12 +232,12 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
 
     private fun interact(other: Cell, delta: Float) {
         val d = other.pos!!.distanceTo(pos!!)
-        if (d - other.radius > interactRange) return
+        if (d - other.getRadius() > interactRange) return
         if (shouldSplit()) {
-            super.burst(Protozoan::class.java) { r: Float -> createSplitChild(r) }
+            super.burst(Protozoan::class.java) { r: Float? -> createSplitChild(r!!) }
             return
         }
-        val r: Float = radius + other.radius
+        val r: Float = getRadius() + other.getRadius()
         if (other is Protozoan) {
             val p = other
             for (spike in spikes) {
@@ -255,18 +257,18 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
                         if (timeMating >= Settings.matingTime) crossOverGenome = p.genome
                     }
                 }
-            } else if (other.isEdible) eat(other as EdibleCell, delta)
+            } else if (other.isEdible()) eat(other as EdibleCell, delta)
         }
     }
 
     private fun spikeInContact(spike: Spike, spikeLen: Float, other: Cell): Boolean {
-        val spikeStartPos = dir.unit().rotate(spike.angle).setLength(radius).translate(pos!!)
+        val spikeStartPos = dir.unit().rotate(spike.angle).setLength(getRadius()).translate(pos!!)
         val spikeEndPos = spikeStartPos.add(spikeStartPos.sub(pos!!).setLength(spikeLen))
-        return other.pos!!.sub(spikeEndPos).len2() < other.radius * other.radius
+        return other.pos!!.sub(spikeEndPos).len2() < other.getRadius() * other.getRadius()
     }
 
     val interactRange: Float
-        get() = if (retina.numberOfCells() > 0 && retina.health > 0) Settings.protozoaInteractRange else radius + 0.005f
+        get() = if (retina.numberOfCells() > 0 && retina.health > 0) Settings.protozoaInteractRange else getRadius() + 0.005f
 
     override fun handleInteractions(delta: Float) {
         super.handleInteractions(delta)
@@ -293,12 +295,9 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         }
     }
 
-    override fun getPrettyName(): String {
-        return "Protozoan"
-    }
 
-    override fun getStats(): Map<String, Float> {
-        val stats = super.getStats()
+    override fun getStats(): MutableMap<String, Float?> {
+        val stats = super.getStats()!!
         stats["Death Rate"] = 100 * deathRate
         stats["Split Radius"] = Settings.statsDistanceScalar * splitRadius
         stats["Max Turning"] = genome.maxTurn
@@ -320,26 +319,27 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         return stats
     }
 
-    override fun getGrowthRate(): Float {
-        var growthRate = super.getGrowthRate()
-        if (radius > splitRadius) growthRate *= health * splitRadius / (5 * radius)
+/*
+    fun getGrowthRate(): Float {
+        var localgrowthRate = super.growthRate
+        if (getRadius() > splitRadius) localgrowthRate *= _health * splitRadius / (5 * getRadius())
         //		for (Spike spike : spikes)
 //			growthRate -= Settings.spikeGrowthPenalty * spike.growthRate;
 //		growthRate -= Settings.retinaCellGrowthCost * retina.numberOfCells();
-        return growthRate
+        return localgrowthRate
     }
-
+*/
     fun age(delta: Float) {
-        deathRate = radius * delta * Settings.protozoaStarvationFactor
+        deathRate = getRadius() * delta * Settings.protozoaStarvationFactor
         //		deathRate *= 0.75f + 0.25f * getSpeed();
         deathRate *= Settings.spikeDeathRatePenalty.pow(spikes.size).toFloat()
-        health -= deathRate
+        _health -= deathRate
     }
 
     override fun update(delta: Float) {
         super.update(delta)
         age(delta)
-        if (isDead) handleDeath()
+        if (isDead()) handleDeath()
         think(delta)
         for (spike in spikes) spike.update(delta)
         for (contactSensor in contactSensors) contactSensor!!.reset()
@@ -366,7 +366,7 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
     }
 
     fun getSpikeLength(spike: Spike): Float {
-        return brain.attack(this) * spike.currentLength * radius / splitRadius
+        return brain.attack(this) * spike.currentLength * getRadius() / splitRadius
     }
 
     val isHarbouringCrossover: Boolean

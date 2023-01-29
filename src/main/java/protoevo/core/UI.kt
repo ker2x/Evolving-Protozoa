@@ -90,10 +90,10 @@ class UI(private val window: Window, private val simulation: Simulation, private
         return 1.3f * infoTextSize * i + window.height / 20f
     }
 
-    private fun renderStats(g: Graphics2D, lineNumber: Int, stats: Map<String, Float>): Int {
+    private fun renderStats(g: Graphics2D, lineNumber: Int, stats: Map<String, Float?>): Int {
         var lineNumber = lineNumber
         for ((key, value) in stats) {
-            val text = key + ": " + numberToString(value, 2)
+            val text = key + ": " + numberToString(value!!, 2)
             val statText = TextObject(
                 text, infoTextSize,
                 Vector2(textAwayFromEdge.toFloat(), getYPosLHS(lineNumber))
@@ -127,7 +127,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
             info[1].text = "Number of protozoa: " + simulation.tank!!.numberOfProtozoa()
             info[1].render(g)
             //			lineNumber++;
-            if (tracked.isDead && !tracked.children.isEmpty()) {
+            if (tracked.isDead() && !tracked.children.isEmpty()) {
                 renderer.track(tracked.children.iterator().next())
                 tracked = renderer.tracked
             }
@@ -138,7 +138,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
             statsTitle.color = Color.WHITE.darker()
             statsTitle.render(g)
             lineNumber++
-            renderStats(g, lineNumber++, tracked.stats)
+            renderStats(g, lineNumber++, tracked!!.getStats()!!)
             if (tracked is Protozoan && tracked.brain is NNBrain) {
                 val brain = tracked.brain as NNBrain
                 renderBrainNetwork(brain.network, g)

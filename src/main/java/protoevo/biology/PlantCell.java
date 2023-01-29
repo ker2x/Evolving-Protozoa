@@ -26,11 +26,10 @@ public class PlantCell extends EdibleCell {
         float range = Settings.maxPlantBirthRadius - radius;
         maxRadius = (float) (radius + range * Simulation.RANDOM.nextDouble());
 
-        setHealthyColour(new Color(
+        healthyColour = new Color(
                 30 + Simulation.RANDOM.nextInt(105),
                 150  + Simulation.RANDOM.nextInt(100),
-                10  + Simulation.RANDOM.nextInt(100))
-        );
+                10  + Simulation.RANDOM.nextInt(100));
         plantAttractionFactor = 5e-8f;
     }
 

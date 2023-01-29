@@ -18,6 +18,7 @@ abstract class Collidable {
     abstract fun rayIntersects(start: Vector2?, end: Vector2?): Boolean
     abstract fun rayCollisions(start: Vector2?, end: Vector2?, collisions: Array<Collision>)
     abstract fun getColor(): Color?
+    abstract fun getMass(): Float
     abstract fun getBoundingBox(): Array<Vector2?>?
     abstract fun handlePotentialCollision(other: Collidable?, delta: Float): Boolean
 }

@@ -119,6 +119,10 @@ class Rock(p1: Vector2?, p2: Vector2?, p3: Vector2?) : Collidable(), Serializabl
         return colour
     }
 
+    override fun getMass(): Float {
+        TODO("Not yet implemented")
+    }
+
     override fun getBoundingBox(): Array<Vector2?>? {
         return boundingBox
     }
