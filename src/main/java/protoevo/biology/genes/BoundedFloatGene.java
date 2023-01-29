@@ -5,7 +5,8 @@ import protoevo.core.Simulation;
 import java.io.Serializable;
 
 public abstract class BoundedFloatGene extends Gene<Float> implements Serializable {
-    float minValue, maxValue;
+    final float minValue;
+    final float maxValue;
 
     public BoundedFloatGene(float minValue, float maxValue) {
         this.minValue = minValue;

@@ -348,9 +348,9 @@ class Renderer(private val simulation: Simulation, private val window: Window) :
             for (i in screenPoints.indices) xPoints[i] = screenPoints[i]!!.x.toInt()
             for (i in screenPoints.indices) yPoints[i] = screenPoints[i]!!.y.toInt()
             val color = Color(
-                rock.getColor()!!.red,
-                rock.getColor()!!.green,
-                rock.getColor()!!.blue,
+                rock.getColor().red,
+                rock.getColor().green,
+                rock.getColor().blue,
                 if (simulation.inDebugMode()) 100 else 255
             )
             g.color = color

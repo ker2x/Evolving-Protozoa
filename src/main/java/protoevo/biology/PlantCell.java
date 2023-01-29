@@ -39,6 +39,7 @@ public class PlantCell extends EdibleCell {
         boolean collision = super.handlePotentialCollision(p, delta);
         if (p != this && p instanceof PlantCell) {
             PlantCell otherPlant = (PlantCell) p;
+            assert p.pos != null;
             force.set(p.pos).take(pos);
             float sqDist = force.len2();
             float r = getRadius() + otherPlant.getRadius();
@@ -69,6 +70,7 @@ public class PlantCell extends EdibleCell {
     }
 
     private void updateCrowding(Cell e) {
+        assert pos != null;
         float sqDist = e.pos.squareDistanceTo(pos);
         if (sqDist < Math.pow(3 * getRadius(), 2)) {
             crowdingFactor += e.getRadius() / (getRadius() + sqDist);
@@ -115,6 +117,7 @@ public class PlantCell extends EdibleCell {
 
     public Map<String, Float> getStats() {
         Map<String, Float> stats = super.getStats();
+        assert stats != null;
         stats.put("Crowding Factor", crowdingFactor);
         stats.put("Split Radius", Settings.statsDistanceScalar * maxRadius);
         return stats;

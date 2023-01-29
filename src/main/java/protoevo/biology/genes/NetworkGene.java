@@ -1,10 +1,10 @@
 package protoevo.biology.genes;
 
 import protoevo.neat.NetworkGenome;
-import protoevo.neat.NeuralNetwork;
 
 import java.io.Serializable;
 
+@SuppressWarnings("CommentedOutCode")
 public class NetworkGene extends Gene<NetworkGenome> implements Serializable {
     public static final long serialVersionUID = -1259753801126730417L;
 

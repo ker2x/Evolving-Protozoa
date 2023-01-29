@@ -1,11 +1,9 @@
 package protoevo.biology.genes;
 
 
-import protoevo.biology.Retina;
 import protoevo.core.Settings;
 import protoevo.neat.NetworkGenome;
 
-import javax.swing.text.html.Option;
 import java.io.Serializable;
 import java.util.Optional;
 

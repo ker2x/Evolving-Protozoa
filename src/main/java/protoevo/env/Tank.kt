@@ -179,7 +179,7 @@ class Tank : Iterable<Cell?>, Serializable {
             appendLine(genomeFile, line)
             genomeWritesHandled.add(line)
         }
-        genomesToWrite.removeAll(genomeWritesHandled)
+        genomesToWrite.removeAll(genomeWritesHandled.toSet())
     }
 
     fun update(delta: Float) {

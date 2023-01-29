@@ -175,8 +175,7 @@ public class ProtozoaGenome implements Serializable
     }
 
 
-    public Protozoan phenotype(Tank tank) throws MiscarriageException
-    {
+    public Protozoan phenotype(Tank tank) {
         return new Protozoan(this, tank);
     }
 
