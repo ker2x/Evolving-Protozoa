@@ -19,7 +19,7 @@ class NetworkGenome : Serializable {
         private set
     private var random = Simulation.RANDOM
     private var mutationChance = Settings.globalMutationChance
-    private var defaultActivation = Neuron.Activation.LINEAR
+    private var defaultActivation = Neuron.LINEAR
     private var fitness = 0.0f
     var numMutations = 0
         private set
@@ -46,13 +46,13 @@ class NetworkGenome : Serializable {
     }
 
     @JvmOverloads
-    constructor(numInputs: Int = 0, numOutputs: Int = 0, defaultActivation: (input: Float) -> Float = Neuron.Activation.TANH) {
+    constructor(numInputs: Int = 0, numOutputs: Int = 0, defaultActivation: (input: Float) -> Float = Neuron.TANH) {
         nSensors = numInputs
         nOutputs = numOutputs
         nNeuronGenes = 0
         sensorNeuronGenes = arrayOfNulls(numInputs)
         for (i in 0 until numInputs) sensorNeuronGenes[i] =
-            NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR)
+            NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.LINEAR)
         outputNeuronGenes = arrayOfNulls(numOutputs)
         for (i in 0 until numOutputs) outputNeuronGenes[i] =
             NeuronGene(nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation)
@@ -85,7 +85,7 @@ class NetworkGenome : Serializable {
 
     fun addSensor(label: String?) {
         val n = NeuronGene(
-            nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR, label
+            nNeuronGenes++, Neuron.Type.SENSOR, Neuron.LINEAR, label
         )
         sensorNeuronGenes = sensorNeuronGenes.copyOf(sensorNeuronGenes.size + 1)
         sensorNeuronGenes[sensorNeuronGenes.size - 1] = n

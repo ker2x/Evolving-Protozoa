@@ -16,13 +16,6 @@ class Neuron(
     val label: String?
 ) : Comparable<Neuron>, Serializable {
 
-    interface Activation : (Float) -> Float , Serializable {
-        companion object {
-            val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
-            val LINEAR : (Float) -> (Float) = { it }
-            val TANH   : (Float) -> (Float) = { tanh(it) }
-        }
-    }
 
     enum class Type(private val value: String) : Serializable {
         SENSOR("SENSOR"), HIDDEN("HIDDEN"), OUTPUT("OUTPUT");
@@ -97,5 +90,9 @@ class Neuron(
 
     companion object {
         private const val serialVersionUID = 1L
+        val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
+        val LINEAR : (Float) -> (Float) = { it }
+        val TANH   : (Float) -> (Float) = { tanh(it) }
+        val RELU   : (Float) -> (Float) = { if (it > 0) it else 0f }
     }
 }
