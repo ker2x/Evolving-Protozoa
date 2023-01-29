@@ -18,9 +18,9 @@ class Neuron(
 
     interface Activation : (Float) -> Float , Serializable {
         companion object {
-            val SIGMOID = fun(z: Float): Float  { return 1 / (1 + exp(-z)) }
-            val LINEAR  = fun(z: Float): Float  { return z }
-            val TANH    = fun(x: Float): Float  { return tanh(x) }
+            val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
+            val LINEAR : (Float) -> (Float) = { it }
+            val TANH   : (Float) -> (Float) = { tanh(it) }
         }
     }
 

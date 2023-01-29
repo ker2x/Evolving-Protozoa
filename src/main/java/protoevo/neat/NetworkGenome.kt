@@ -3,12 +3,12 @@ package protoevo.neat
 import protoevo.biology.Retina
 import protoevo.core.Settings
 import protoevo.core.Simulation
-import protoevo.neat.Neuron
 import java.io.Serializable
 import java.util.*
 import java.util.function.Function
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import kotlin.math.max
 
 class NetworkGenome : Serializable {
     private lateinit var sensorNeuronGenes: Array<NeuronGene?>
@@ -19,7 +19,7 @@ class NetworkGenome : Serializable {
         private set
     private var random = Simulation.RANDOM
     private var mutationChance = Settings.globalMutationChance
-    private var defaultActivation = Neuron.Activation.Companion.LINEAR
+    private var defaultActivation = Neuron.Activation.LINEAR
     private var fitness = 0.0f
     var numMutations = 0
         private set
@@ -46,13 +46,13 @@ class NetworkGenome : Serializable {
     }
 
     @JvmOverloads
-    constructor(numInputs: Int = 0, numOutputs: Int = 0, defaultActivation: (input: Float) -> Float = Neuron.Activation.Companion.TANH) {
+    constructor(numInputs: Int = 0, numOutputs: Int = 0, defaultActivation: (input: Float) -> Float = Neuron.Activation.TANH) {
         nSensors = numInputs
         nOutputs = numOutputs
         nNeuronGenes = 0
         sensorNeuronGenes = arrayOfNulls(numInputs)
         for (i in 0 until numInputs) sensorNeuronGenes[i] =
-            NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.Companion.LINEAR)
+            NeuronGene(nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR)
         outputNeuronGenes = arrayOfNulls(numOutputs)
         for (i in 0 until numOutputs) outputNeuronGenes[i] =
             NeuronGene(nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation)
@@ -85,13 +85,13 @@ class NetworkGenome : Serializable {
 
     fun addSensor(label: String?) {
         val n = NeuronGene(
-            nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.Companion.LINEAR, label
+            nNeuronGenes++, Neuron.Type.SENSOR, Neuron.Activation.LINEAR, label
         )
-        sensorNeuronGenes = Arrays.copyOf(sensorNeuronGenes, sensorNeuronGenes.size + 1)
+        sensorNeuronGenes = sensorNeuronGenes.copyOf(sensorNeuronGenes.size + 1)
         sensorNeuronGenes[sensorNeuronGenes.size - 1] = n
         nSensors++
         val originalLen = synapseGenes.size
-        synapseGenes = Arrays.copyOf(synapseGenes, originalLen + outputNeuronGenes.size)
+        synapseGenes = synapseGenes.copyOf(originalLen + outputNeuronGenes.size)
         for (i in outputNeuronGenes.indices) synapseGenes[originalLen + i] = SynapseGene(n, outputNeuronGenes[i])
     }
 
@@ -99,11 +99,11 @@ class NetworkGenome : Serializable {
         val n = NeuronGene(
             nNeuronGenes++, Neuron.Type.OUTPUT, defaultActivation, label
         )
-        outputNeuronGenes = Arrays.copyOf(outputNeuronGenes, outputNeuronGenes.size + 1)
+        outputNeuronGenes = outputNeuronGenes.copyOf(outputNeuronGenes.size + 1)
         outputNeuronGenes[outputNeuronGenes.size - 1] = n
         nOutputs++
         val originalLen = synapseGenes.size
-        synapseGenes = Arrays.copyOf(synapseGenes, originalLen + sensorNeuronGenes.size)
+        synapseGenes = synapseGenes.copyOf(originalLen + sensorNeuronGenes.size)
         for (i in sensorNeuronGenes.indices) synapseGenes[originalLen + i] = SynapseGene(sensorNeuronGenes[i], n)
     }
 
@@ -111,11 +111,11 @@ class NetworkGenome : Serializable {
         val n = NeuronGene(
             nNeuronGenes++, Neuron.Type.HIDDEN, defaultActivation
         )
-        hiddenNeuronGenes = Arrays.copyOf(hiddenNeuronGenes, hiddenNeuronGenes.size + 1)
+        hiddenNeuronGenes = hiddenNeuronGenes.copyOf(hiddenNeuronGenes.size + 1)
         hiddenNeuronGenes[hiddenNeuronGenes.size - 1] = n
         val inConnection = SynapseGene(g!!.`in`, n, 1f)
-        val outConnection = SynapseGene(n, g!!.out, g!!.weight)
-        synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.size + 2)
+        val outConnection = SynapseGene(n, g.out, g.weight)
+        synapseGenes = synapseGenes.copyOf(synapseGenes.size + 2)
         synapseGenes[synapseGenes.size - 2] = inConnection
         synapseGenes[synapseGenes.size - 1] = outConnection
         g.isDisabled = (true)
@@ -136,12 +136,12 @@ class NetworkGenome : Serializable {
         numMutations++
         val geneIndex = getSynapseGeneIndex(`in`, out)
         if (geneIndex == -1) {
-            synapseGenes = Arrays.copyOf(synapseGenes, synapseGenes.size + 1)
+            synapseGenes = synapseGenes.copyOf(synapseGenes.size + 1)
             synapseGenes[synapseGenes.size - 1] = SynapseGene(`in`, out)
         } else {
             val g = synapseGenes[geneIndex]
             if (random.nextBoolean()) createHiddenBetween(g) else synapseGenes[geneIndex] =
-                SynapseGene(`in`, out, SynapseGene.Companion.randomInitialWeight(), g!!.innovation)
+                SynapseGene(`in`, out, SynapseGene.randomInitialWeight(), g!!.innovation)
         }
     }
 
@@ -158,12 +158,12 @@ class NetworkGenome : Serializable {
     fun crossover(other: NetworkGenome): NetworkGenome {
         val myConnections = Arrays.stream(synapseGenes)
             .collect(Collectors.toMap(
-                Function { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
+                { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
             )
             )
         val theirConnections = Arrays.stream(other.synapseGenes)
             .collect(Collectors.toMap(
-                Function { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
+                { obj: SynapseGene? -> obj!!.innovation }, Function.identity()
             )
             )
         val innovationNumbers: MutableSet<Int> = HashSet()
@@ -190,7 +190,7 @@ class NetworkGenome : Serializable {
         val childSynapseArray = childSynapses.toTypedArray()
 
         val neuronGenes = childSynapses.stream()
-            .flatMap { s: SynapseGene? -> Stream.of(s!!.`in`, s!!.out) }
+            .flatMap { s: SynapseGene? -> Stream.of(s!!.`in`, s.out) }
             .collect(Collectors.toSet())
 
         val childSensorGenes = neuronGenes.stream()
@@ -219,9 +219,9 @@ class NetworkGenome : Serializable {
 
     private fun maxNeuronId(): Int {
         var id = 0
-        for (g in sensorNeuronGenes) id = Math.max(g!!.id, id)
-        for (g in hiddenNeuronGenes) id = Math.max(g!!.id, id)
-        for (g in outputNeuronGenes) id = Math.max(g!!.id, id)
+        for (g in sensorNeuronGenes) id = max(g!!.id, id)
+        for (g in hiddenNeuronGenes) id = max(g!!.id, id)
+        for (g in outputNeuronGenes) id = max(g!!.id, id)
         return id
     }
 
@@ -231,7 +231,7 @@ class NetworkGenome : Serializable {
             val inputs = arrayOfNulls<Neuron>(0)
             val weights = FloatArray(0)
             neurons[g!!.id] = Neuron(
-                g!!.id, inputs, weights, g!!.type, g!!.activation, g!!.label
+                g.id, inputs, weights, g.type, g.activation, g.label
             )
         }
         val inputCounts = IntArray(neurons.size)
@@ -241,16 +241,16 @@ class NetworkGenome : Serializable {
             var g: NeuronGene?
             g = if (i < hiddenNeuronGenes.size) hiddenNeuronGenes[i] else outputNeuronGenes[i - hiddenNeuronGenes.size]
             val inputs = arrayOfNulls<Neuron>(inputCounts[g!!.id])
-            val weights = FloatArray(inputCounts[g!!.id])
-            neurons[g!!.id] = Neuron(
-                g!!.id, inputs, weights, g!!.type, g!!.activation, g!!.label
+            val weights = FloatArray(inputCounts[g.id])
+            neurons[g.id] = Neuron(
+                g.id, inputs, weights, g.type, g.activation, g.label
             )
         }
         Arrays.fill(inputCounts, 0)
         for (g in synapseGenes) {
             val i = inputCounts[g!!.out!!.id]++
-            neurons[g!!.out!!.id]!!.inputs[i] = neurons[g.`in`!!.id]
-            neurons[g!!.out!!.id]!!.weights[i] = g!!.weight
+            neurons[g.out!!.id]!!.inputs[i] = neurons[g.`in`!!.id]
+            neurons[g.out!!.id]!!.weights[i] = g.weight
         }
         return NeuralNetwork(neurons)
     }
