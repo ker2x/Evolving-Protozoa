@@ -270,13 +270,8 @@ class Protozoan(@JvmField val genome: ProtozoaGenome, tank: Tank?,
         wasJustDamaged = false
         retina.reset()
         val chunkManager = tank.chunkManager
-        val entities = chunkManager
-            .broadCollisionDetection(pos!!, interactRange)
-        entities.forEachRemaining { e: Collidable? ->
-            if (e != null) {
-                interact(e, delta)
-            }
-        }
+        val entities = chunkManager.broadCollisionDetection(pos!!, interactRange)
+        entities.forEachRemaining { e: Collidable? -> interact(e!!, delta) }
     }
 
     private fun breakIntoPellets() {

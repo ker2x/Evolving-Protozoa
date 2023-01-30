@@ -14,6 +14,17 @@ import javax.swing.Timer
 
 /***
  * The window class for the application.
+ * @param title The title of the window.
+ * @param simulation The simulation to be rendered.
+ * @constructor Creates a new window.
+ * @property frame The JFrame of the window.
+ * @property input The input handler for the window.
+ * @property renderer The renderer for the window.
+ * @property simulation The simulation to be rendered.
+ * @property controller The controller for the window.
+ * @property width The width of the window.
+ * @property height The height of the window.
+ * @property timer The timer for the window.
  */
 class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, ActionListener {
     val frame: JFrame
@@ -60,7 +71,7 @@ class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, Actio
     }
 
     override fun actionPerformed(event: ActionEvent) {
-        if (frame.isVisible) {
+        if (frame.isActive) {   // Better than isVisible. isVisible is rendering even if the window is minimized.
             controller.update()
             renderer.render()
             timer.restart()

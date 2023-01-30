@@ -5,9 +5,13 @@ import protoevo.utils.Window
 import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
+/***
+ * The main entry point for the application.
+ * @property refreshDelay The delay between each frame.
+ */
 object Application {
 
-    const val refreshDelay = 1000 / 120f
+    const val refreshDelay = 1 //1000 / 120f
 
     @JvmStatic
     fun main(args: Array<String>) {
