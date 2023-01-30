@@ -1,89 +1,64 @@
-package protoevo.biology.genes;
+package protoevo.biology.genes
 
-import protoevo.core.Simulation;
+import protoevo.core.Simulation
+import java.io.Serializable
 
-import java.io.Serializable;
+abstract class Gene<T> : Serializable {
+    @JvmField
+    var values: T
+    //@JvmField
+    open var numMutations = 0
+        get() { return field}
+    var isDisabled = false
 
-public abstract class Gene<T> implements Serializable {
-    public static final long serialVersionUID = -1504556284113269258L;
-    private T value;
-    private int numMutations = 0;
-    public static int totalMutations = 0;
-
-    public boolean disabled = false;
-
-    public Gene() {
-        value = getNewValue();
+    constructor() {
+        values = newValue
     }
 
-    public Gene(T value) {
-        this.value = value;
+    constructor(values: T) {
+        this.values = values
     }
 
-    public abstract <G extends Gene<T>> G createNew(T value);
-
-    public <G extends Gene<T>> G createNew(T value, int numMutations) {
-        G gene = createNew(value);
-        gene.setNumMutations(numMutations);
-        totalMutations++;
-        return gene;
+    abstract fun <G : Gene<T>?> createNew(value: T): G
+    fun <G : Gene<T>?> createNew(value: T, numMutations: Int): G {
+        val gene = createNew<G>(value)
+        gene!!.numMutations = numMutations
+        totalMutations++
+        return gene
     }
 
-    public <G extends Gene<T>> G mutate(Gene<?>[] genome) {
-        return this.createNew(getNewValue(), numMutations + 1);
+    open fun <G : Gene<T>?> mutate(genome: Array<Gene<*>?>?): G {
+        return this.createNew(newValue, numMutations + 1)
     }
 
-    public Gene<?> crossover(Gene<?> other) {
-        if (Simulation.RANDOM.nextBoolean())
-            return this;
-        else
-            return other;
+    fun crossover(other: Gene<*>): Gene<*> {
+        return if (Simulation.RANDOM.nextBoolean()) this else other
     }
 
-    public abstract boolean canDisable();
-
-    public void toggleEnabled() {
-        disabled = !disabled;
+    abstract fun canDisable(): Boolean
+    fun toggleEnabled() {
+        isDisabled = !isDisabled
     }
 
-    public boolean isDisabled() {
-        return disabled;
+    abstract fun disabledValue(): T
+    abstract val newValue: T
+    abstract val traitName: String?
+    fun toggle(): Gene<T> {
+        val newGene = this.createNew<Gene<T>>(values, numMutations + 1)
+        newGene.isDisabled = !isDisabled
+        return newGene
     }
 
-    public abstract T disabledValue();
-
-    public void setNumMutations(int numMutations) {
-        this.numMutations = numMutations;
+    open fun valueString(): String {
+        return values.toString()
     }
 
-    public abstract T getNewValue();
-
-    public abstract String getTraitName();
-
-    public T getValue() {
-        return value;
+    override fun toString(): String {
+        return valueString() + ":" + numMutations + ":" + if (isDisabled) "0" else "1"
     }
 
-    public void setValue(T t) {
-        value = t;
-    }
-
-    public int getNumMutations() {
-        return numMutations;
-    }
-
-    public Gene<T> toggle() {
-        Gene<T> newGene = this.createNew(getValue(), numMutations + 1);
-        newGene.disabled = !disabled;
-        return newGene;
-    }
-
-    public String valueString() {
-        return value.toString();
-    }
-
-    @Override
-    public String toString() {
-        return valueString() + ":" + numMutations + ":" + (disabled ? "0" : "1");
+    companion object {
+        const val serialVersionUID = -1504556284113269258L
+        var totalMutations = 0
     }
 }

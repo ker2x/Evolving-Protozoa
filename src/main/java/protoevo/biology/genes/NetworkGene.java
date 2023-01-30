@@ -29,7 +29,7 @@ public class NetworkGene extends Gene<NetworkGenome> implements Serializable {
 
     @Override
     public NetworkGenome getNewValue() {
-        NetworkGenome networkGenome = new NetworkGenome(getValue());
+        NetworkGenome networkGenome = new NetworkGenome(values);
         networkGenome.mutate();
         return networkGenome;
     }
@@ -50,12 +50,12 @@ public class NetworkGene extends Gene<NetworkGenome> implements Serializable {
 
     @Override
     public int getNumMutations() {
-        return getValue().getNumMutations();
+        return values.getNumMutations();
     }
 
     @Override
     public String valueString() {
-        return getValue().hashCode() + "";
+        return values.hashCode() + "";
     }
 
 }

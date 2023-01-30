@@ -33,7 +33,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
 
     @Override
     public String valueString() {
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         StringBuilder str = new StringBuilder(spikes.length + ";");
         for (Protozoan.Spike spike : spikes)
             str.append(spike.currentLength).append(";").append(spike.angle).append(";").append(spike.hidden_growthRate);
@@ -44,7 +44,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
         float radius = -1;
         for (Gene<?> gene : genome)
             if (gene instanceof ProtozoaRadiusGene)
-                radius = (float) gene.getValue();
+                radius = (float) gene.values;
         return radius;
     }
 
@@ -61,7 +61,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
     }
 
     private <G extends Gene<Protozoan.Spike[]>> G addSpike(Gene<?>[] genome) {
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         Protozoan.Spike[] newSpikes = Arrays.copyOf(spikes, spikes.length+1);
 
         Protozoan.Spike spike = new Protozoan.Spike();
@@ -75,7 +75,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
     }
 
     private <G extends Gene<Protozoan.Spike[]>> G removeSpike() {
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         int idxRemove = Simulation.RANDOM.nextInt(spikes.length);
         Protozoan.Spike[] newSpikes = new Protozoan.Spike[spikes.length - 1];
         int j = 0;
@@ -90,7 +90,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
     }
 
     private <G extends Gene<Protozoan.Spike[]>> G mutateRandomSpike(Gene<?>[] genome) {
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         Protozoan.Spike[] newSpikes = Arrays.copyOf(spikes, spikes.length);
         int idx = Simulation.RANDOM.nextInt(spikes.length);
         int nSpikeProperties = 3;
@@ -114,7 +114,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
     public <G extends Gene<Protozoan.Spike[]>> G mutate(Gene<?>[] genome) {
         float p = Simulation.RANDOM.nextFloat();
 
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         if (p > 3f / 4f || spikes.length == 0)
             return addSpike(genome);
         else if (p > 2f / 4f)
@@ -126,7 +126,7 @@ public class ProtozoaSpikesGene extends Gene<Protozoan.Spike[]> implements Seria
     }
 
     private <G extends Gene<Protozoan.Spike[]>> G rotateSpikes() {
-        Protozoan.Spike[] spikes = getValue();
+        Protozoan.Spike[] spikes = values;
         Protozoan.Spike[] newSpikes = Arrays.copyOf(spikes, spikes.length);
         float theta = randomAngle();
         for (int i = 0; i < spikes.length; i++) {

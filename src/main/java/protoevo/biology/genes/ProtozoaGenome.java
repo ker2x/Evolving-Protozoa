@@ -125,7 +125,7 @@ public class ProtozoaGenome implements Serializable
             if (clazz.isInstance(gene)) {
                 return gene.isDisabled() ?
                         clazz.cast(gene).disabledValue() :
-                        clazz.cast(gene).getValue();
+                        clazz.cast(gene).values;
             }
         return null;
     }

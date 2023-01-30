@@ -11,13 +11,13 @@ public abstract class BoundedFloatGene extends Gene<Float> implements Serializab
     public BoundedFloatGene(float minValue, float maxValue) {
         this.minValue = minValue;
         this.maxValue = maxValue;
-        setValue(getNewValue());
+        values = getNewValue();
     }
 
     public BoundedFloatGene(float minValue, float maxValue, float value) {
         this.minValue = minValue;
         this.maxValue = maxValue;
-        setValue(value);
+        values = value;
     }
 
     @Override

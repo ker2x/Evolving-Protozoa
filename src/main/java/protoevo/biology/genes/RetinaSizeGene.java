@@ -25,7 +25,7 @@ public class RetinaSizeGene extends Gene<Integer> implements Serializable {
 
     @Override
     public <G extends Gene<Integer>> G mutate(Gene<?>[] genes) {
-        int size = getValue();
+        int size = values;
         if (size == Settings.maxRetinaSize)
             return (G) this;
 
@@ -57,7 +57,7 @@ public class RetinaSizeGene extends Gene<Integer> implements Serializable {
 
         int i = findNetworkGene(genes).orElseThrow(() -> new RuntimeException("No Network Gene found"));
         NetworkGene networkGene = (NetworkGene) genes[i];
-        NetworkGenome currentNetworkGenome = networkGene.getValue();
+        NetworkGenome currentNetworkGenome = networkGene.values;
         NetworkGenome newNetworkGenome = new NetworkGenome(currentNetworkGenome);
         newNetworkGenome.ensureRetinaSensorsExist(newRetinaSize);
         genes[i] = networkGene.createNew(newNetworkGenome);

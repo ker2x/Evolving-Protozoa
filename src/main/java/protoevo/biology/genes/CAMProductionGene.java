@@ -24,7 +24,7 @@ public class CAMProductionGene extends Gene<Map<CellAdhesion.CellAdhesionMolecul
 
     @Override
     public <G extends Gene<Map<CellAdhesion.CellAdhesionMolecule, Float>>> G mutate(Gene<?>[] genes) {
-        Map<CellAdhesion.CellAdhesionMolecule, Float> map = getValue();
+        Map<CellAdhesion.CellAdhesionMolecule, Float> map = values;
         Map<CellAdhesion.CellAdhesionMolecule, Float> newMap = new HashMap<>();
         for (CellAdhesion.CellAdhesionMolecule cam : map.keySet()) {
             if (Simulation.RANDOM.nextBoolean()) {
@@ -60,7 +60,7 @@ public class CAMProductionGene extends Gene<Map<CellAdhesion.CellAdhesionMolecul
 
     @Override
     public String valueString() {
-        Map<CellAdhesion.CellAdhesionMolecule, Float> map = getValue();
+        Map<CellAdhesion.CellAdhesionMolecule, Float> map = values;
         StringBuilder str = new StringBuilder();
         for (CellAdhesion.CellAdhesionMolecule cam : map.keySet())
             str.append(cam.toString()).append(";")

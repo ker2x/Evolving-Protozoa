@@ -34,7 +34,7 @@ public class ProtozoaColorGene extends Gene<Color> implements Serializable {
 
     @Override
     public Color getNewValue() {
-        Color color = getValue();
+        Color color = values;
         int minVal = 80;
         int maxVal = 150;
         if (color == null)
@@ -61,7 +61,7 @@ public class ProtozoaColorGene extends Gene<Color> implements Serializable {
 
     @Override
     public String valueString() {
-        Color value = getValue();
+        Color value = values;
         return value.getRed() + ";" + value.getGreen() + ";" + value.getBlue();
     }
 
