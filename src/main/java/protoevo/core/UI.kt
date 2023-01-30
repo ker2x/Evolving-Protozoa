@@ -186,7 +186,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
     private fun renderBrainNetwork(nn: NeuralNetwork, g: Graphics2D) {
         val networkDepth = nn.depth
         val boxWidth = (window.width / 2.0 - 1.2 * renderer.trackingScopeRadius).toInt()
-        val boxHeight = 3 * window.height / 4
+        val boxHeight = window.height * 3 / 4
         val boxXStart = window.width - (boxWidth * 1.1).toInt()
         val boxYStart = (window.height - boxHeight) / 2
         if (simulation.inDebugMode()) {
@@ -279,7 +279,7 @@ class UI(private val window: Window, private val simulation: Simulation, private
             }
             if (neuron.depth == networkDepth && neuron.type == Neuron.Type.HIDDEN) g.color = Color(150, 30, 150)
             val s = g.stroke
-            g.stroke = BasicStroke((0.3 * r).toInt().toFloat())
+            g.stroke = BasicStroke(((0.3 * r).toFloat()))
             g.drawOval(
                 neuron.graphicsX - r,
                 neuron.graphicsY - r,
