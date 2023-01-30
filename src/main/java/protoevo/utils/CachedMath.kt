@@ -1,13 +1,13 @@
 package protoevo.utils
 
 /**
- * A class that caches the results of the sin and cos functions.
+ * A class that caches the results of the sin, cos, tanh functions.
  * This is useful for when you need to call these functions a lot, as it can be much faster than the built-in functions.
  * The precision of the cache is set by the precision variable.
  * The cache is only accurate to 3 decimal places.
  */
 object CachedMath {
-    private const val precision = 100  // The number of values to cache
+    private const val precision = 1000  // The number of values to cache
 
     // Create the cache
     private val sinLookupTable = FloatArray(precision) { i -> kotlin.math.sin(2 * Math.PI * i / precision).toFloat() }
