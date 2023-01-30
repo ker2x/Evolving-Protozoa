@@ -3,6 +3,9 @@ package protoevo.utils
 import java.awt.*
 import java.awt.font.FontRenderContext
 
+/***
+ * A class to represent text on the screen
+ */
 class TextObject(var text: String?, private var m_font: String?, var size: Int, var position: Vector2) {
     private var style: Int
     var color: Color?

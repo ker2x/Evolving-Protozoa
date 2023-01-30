@@ -4,6 +4,9 @@ import protoevo.core.Application.exit
 import protoevo.core.Simulation
 import java.io.*
 
+/***
+ * REPL - Read-Eval-Print-Loop
+ */
 class REPL(private val simulation: Simulation, private val window: Window) : Runnable {
     private val running = true
     @Throws(Exception::class)

@@ -3,6 +3,9 @@ package protoevo.utils
 import java.io.Serializable
 import kotlin.math.*
 
+/***
+ * A 2D vector class
+ */
 class Vector2(x: Float, y: Float) : Serializable {
 
     @JvmField

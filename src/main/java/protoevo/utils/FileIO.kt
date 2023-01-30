@@ -5,6 +5,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
+/***
+ * A class for saving and loading objects to and from files.
+ */
 object FileIO {
     @JvmStatic
     fun save(`object`: Any?, filename: String) {

@@ -4,6 +4,9 @@ import java.awt.event.*
 import java.util.*
 import javax.swing.SwingUtilities
 
+/***
+ * Input class for handling keyboard and mouse input.
+ */
 class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
     var currentMousePosition = Vector2(0f, 0f)
         private set

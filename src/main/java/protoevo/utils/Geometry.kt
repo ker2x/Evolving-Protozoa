@@ -2,7 +2,9 @@ package protoevo.utils
 
 import kotlin.math.sqrt
 
+
 object Geometry {
+
     @JvmStatic
     fun circleIntersectLineCoefficients(dir: Vector2?, x: Vector2?, r: Float): FloatArray? {
         val a = dir!!.len2()

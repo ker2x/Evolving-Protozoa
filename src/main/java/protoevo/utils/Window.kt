@@ -12,6 +12,9 @@ import java.awt.event.ActionListener
 import javax.swing.JFrame
 import javax.swing.Timer
 
+/***
+ * The window class for the application.
+ */
 class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, ActionListener {
     val frame: JFrame
     @JvmField
