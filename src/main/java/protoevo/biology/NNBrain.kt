@@ -1,104 +1,81 @@
-package protoevo.biology;
+package protoevo.biology
 
-import protoevo.env.ChemicalSolution;
-import protoevo.core.Settings;
-import protoevo.neat.NeuralNetwork;
+import protoevo.core.Settings
+import protoevo.neat.NeuralNetwork
 
-import java.awt.*;
+class NNBrain @JvmOverloads constructor(val network: NeuralNetwork,
+                                        private val maxTurn: Float = Math.toRadians(Settings.maxTurnAngle.toDouble())
+                                            .toFloat()
+) : Brain {
+    private var outputs: FloatArray
+    private val inputs: FloatArray
 
-public class NNBrain implements Brain {
-
-    public final NeuralNetwork network;
-    private float[] outputs;
-    private final float[] inputs;
-    private final float maxTurn;
-
-    public NNBrain(NeuralNetwork network, float maxTurn) {
-        this.network = network;
-        this.maxTurn = maxTurn;
-        outputs = network.outputs();
-        inputs = new float[network.getInputSize()];
+    init {
+        outputs = network.outputs()
+        inputs = FloatArray(network.inputSize)
     }
 
-    public NNBrain(NeuralNetwork network) {
-        this(network, (float) Math.toRadians(Settings.maxTurnAngle));
-    }
-
-    @Override
-    public void tick(Protozoan p)
-    {
-        int i = 0;
+    override fun tick(p: Protozoan?) {
+        var i = 0
         // ProtozoaGenome.nonVisualSensorSize
-        inputs[i++] = 1; // bias term
-        inputs[i++] = p.getHealth() * 2 - 1;
-        inputs[i++] = 2 * p.getRadius() / p.genome.getSplitRadius() - 1;
-        inputs[i++] = 2 * p.getConstructionMassAvailable() / p.getConstructionMassCap() - 1;
-
-        for (Protozoan.ContactSensor sensor : p.contactSensors)
-            inputs[i++] = sensor.inContact() ? 1f : 0f;
-
+        inputs[i++] = 1f // bias term
+        inputs[i++] = p!!.getHealth() * 2 - 1
+        inputs[i++] = 2 * p.getRadius() / p.genome.splitRadius - 1
+        inputs[i++] = 2 * p.constructionMassAvailable / p.constructionMassCap - 1
+        for (sensor in p.contactSensors) inputs[i++] = if (sensor!!.inContact()) 1f else 0f
         if (Settings.enableChemicalField) {
-            ChemicalSolution chemicalSolution = p.tank.chemicalSolution;
-            int chemicalX1 = chemicalSolution.toChemicalGridX(p.pos.x - p.getRadius());
-            int chemicalX2 = chemicalSolution.toChemicalGridX(p.pos.x + p.getRadius());
-            int chemicalY1 = chemicalSolution.toChemicalGridY(p.pos.x - p.getRadius());
-            int chemicalY2 = chemicalSolution.toChemicalGridY(p.pos.x + p.getRadius());
+            val chemicalSolution = p.tank.chemicalSolution
+            val chemicalX1 = chemicalSolution!!.toChemicalGridX(p.pos!!.x - p.getRadius())
+            val chemicalX2 = chemicalSolution.toChemicalGridX(p.pos!!.x + p.getRadius())
+            val chemicalY1 = chemicalSolution.toChemicalGridY(p.pos!!.x - p.getRadius())
+            val chemicalY2 = chemicalSolution.toChemicalGridY(p.pos!!.x + p.getRadius())
             inputs[i++] = chemicalSolution.getPlantPheromoneDensity(chemicalX1, chemicalY1) -
-                    chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY2);
+                    chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY2)
             inputs[i++] = chemicalSolution.getPlantPheromoneDensity(chemicalX1, chemicalY2) -
-                    chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY1);
-            int chemicalX = chemicalSolution.toChemicalGridX(p.pos.x);
-            int chemicalY = chemicalSolution.toChemicalGridY(p.pos.y);
-            inputs[i++] = 2 * chemicalSolution.getPlantPheromoneDensity(chemicalX, chemicalY) - 1;
+                    chemicalSolution.getPlantPheromoneDensity(chemicalX2, chemicalY1)
+            val chemicalX = chemicalSolution.toChemicalGridX(p.pos!!.x)
+            val chemicalY = chemicalSolution.toChemicalGridY(p.pos!!.y)
+            inputs[i++] = 2 * chemicalSolution.getPlantPheromoneDensity(chemicalX, chemicalY) - 1
         }
-
-        float retinaHealth = p.getRetina().getHealth();
-        for (Retina.Cell cell : p.getRetina()) {
+        val retinaHealth = p.getRetina().health
+        for (cell in p.getRetina()) {
             if (cell.anythingVisible()) {
-                Color colour = cell.getColour();
-                inputs[i++] = retinaHealth * (-1 + 2 * colour.getRed() / 255f);
-                inputs[i++] = retinaHealth * (-1 + 2 * colour.getGreen() / 255f);
-                inputs[i++] = retinaHealth * (-1 + 2 * colour.getBlue() / 255f);
+                val colour = cell.colour
+                inputs[i++] = retinaHealth * (-1 + 2 * colour.red / 255f)
+                inputs[i++] = retinaHealth * (-1 + 2 * colour.green / 255f)
+                inputs[i++] = retinaHealth * (-1 + 2 * colour.blue / 255f)
             } else {
-                inputs[i++] = 0f;
-                inputs[i++] = 0f;
-                inputs[i++] = 0f;
+                inputs[i++] = 0f
+                inputs[i++] = 0f
+                inputs[i++] = 0f
             }
         }
-
-        network.setInput(inputs);
-        network.tick();
-        outputs = network.outputs();
+        network.setInput(*inputs)
+        network.tick()
+        outputs = network.outputs()
     }
 
-    @Override
-    public float turn(Protozoan p)
-    {
-        float turn = outputs[0];
-        return turn * maxTurn;
+    override fun turn(p: Protozoan?): Float {
+        val turn = outputs[0]
+        return turn * maxTurn
     }
 
-    @Override
-    public float speed(Protozoan p)
-    {
+    override fun speed(p: Protozoan?): Float {
         return Math.min(
-                Settings.maxProtozoaSpeed * outputs[1],
-                Settings.maxProtozoaSpeed
-        );
+            Settings.maxProtozoaSpeed * outputs[1],
+            Settings.maxProtozoaSpeed
+        )
     }
 
-    @Override
-    public boolean wantToMateWith(Protozoan p) {
-        return outputs[2] > 0;
+    override fun wantToMateWith(p: Protozoan?): Boolean {
+        return outputs[2] > 0
     }
 
-    @Override
-    public float attack(Protozoan p) {
-        return outputs[3] > 0 ? 1 : 0;
+    override fun attack(p: Protozoan?): Float {
+        return if (outputs[3] > 0) 1f else 0f
     }
 
-    @Override
-    public float energyConsumption() {
-        return 0;
+    override fun energyConsumption(): Float {
+        return 0f
     }
 }
