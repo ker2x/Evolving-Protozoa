@@ -1,6 +1,3 @@
-package protoevo.biology.genes;
+package protoevo.biology.genes
 
-public @interface GeneticTrait {
-
-    String value();
-}
+annotation class GeneticTrait(val value: String)

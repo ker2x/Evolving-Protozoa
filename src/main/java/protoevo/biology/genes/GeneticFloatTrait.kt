@@ -1,8 +1,7 @@
-package protoevo.biology.genes;
+package protoevo.biology.genes
 
-public @interface GeneticFloatTrait {
-
-    float value() default 0;
-    float min() default Float.MIN_VALUE;
-    float max() default Float.MAX_VALUE;
-}
+annotation class GeneticFloatTrait(
+    val value: Float = 0f,
+    val min: Float = Float.MIN_VALUE,
+    val max: Float = Float.MAX_VALUE
+)
