@@ -1,5 +1,6 @@
 package protoevo.neat
 
+import protoevo.utils.CachedMath
 import java.io.Serializable
 import kotlin.math.exp
 import kotlin.math.tanh
@@ -110,7 +111,7 @@ class Neuron(
         private const val serialVersionUID = 1L
         val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
         val LINEAR : (Float) -> (Float) = { it }
-        val TANH   : (Float) -> (Float) = { tanh(it) }
+        val TANH   : (Float) -> (Float) = { CachedMath.tanh(it) }
         val RELU   : (Float) -> (Float) = { if (it > 0) it else 0f }
     }
 }

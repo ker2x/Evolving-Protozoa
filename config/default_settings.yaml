@@ -40,7 +40,7 @@ food_waste_multiplier: 1.5
 cam_energy_cost: 0.05
 
 # Performance parameters
-physics_substeps: 3
+physics_substeps: 1
 spatial_hash_resolution: 100
 chemical_field_resolution: 400
 chemical_update_interval: 10
