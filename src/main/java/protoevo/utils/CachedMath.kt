@@ -17,7 +17,7 @@ object CachedMath {
     private fun sinLookup(a: Int): Float = if (a >= 0) sinLookupTable[a % precision] else -sinLookupTable[-a % precision]
     private fun tanhLookup(a: Int): Float = if (a >= 0) tanhLookupTable[a % precision] else -tanhLookupTable[-a % precision]
 
-    // Return the sin and cos of the given angle
+    // Return the sin, cos, tanh of the given angle
     fun sin(a: Float): Float = sinLookup((a * precision / (2 * Math.PI)).toInt())
     fun cos(a: Float): Float = sinLookup(((a + Math.PI / 2) * precision / (2 * Math.PI)).toInt())
     fun tanh(a: Float): Float = tanhLookup((a * precision / (2 * Math.PI)).toInt())
