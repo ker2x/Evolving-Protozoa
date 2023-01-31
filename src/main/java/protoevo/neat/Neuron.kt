@@ -25,24 +25,31 @@ class Neuron(
 ) : Comparable<Neuron>, Serializable {
 
 
-    enum class Type(private val value: String) : Serializable {
-        SENSOR("SENSOR"), HIDDEN("HIDDEN"), OUTPUT("OUTPUT");
+    enum class Type() : Serializable {
+        //SENSOR("SENSOR"),
+        //HIDDEN("HIDDEN"),
+        //OUTPUT("OUTPUT");
+        SENSOR,
+        HIDDEN,
+        OUTPUT;
 
         override fun toString(): String {
-            return value
+            return when (this) {
+                SENSOR -> "SENSOR"
+                HIDDEN -> "HIDDEN"
+                OUTPUT -> "OUTPUT"
+            }
         }
     }
 
-    var state = 0f
-    var lastState = 0f
-        private set
     private var nextState :Float = 0f
     private var learningRate = 0f
+
+    var state = 0f
+    var lastState = 0f
     var depth = -1
     var graphicsX = -1
-        private set
     var graphicsY = -1
-        private set
     var isConnectedToOutput = true
 
     init {
@@ -116,9 +123,9 @@ class Neuron(
 
     companion object {
         private const val serialVersionUID = 1L
-        val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
         val LINEAR : (Float) -> (Float) = { it }
         val TANH   : (Float) -> (Float) = { CachedMath.tanh(it) }
+        val SIGMOID: (Float) -> (Float) = { 1 / (1 + exp(-it)) }
         val RELU   : (Float) -> (Float) = { if (it > 0) it else 0f }
     }
 }
