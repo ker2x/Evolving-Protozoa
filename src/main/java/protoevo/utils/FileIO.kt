@@ -35,7 +35,7 @@ object FileIO {
     }
 
     @JvmStatic
-    fun appendLine(filePath: String?, line: String) {
+    fun appendLine(filePath: String, line: String) {
             Files.write(
                 Paths.get(filePath),
                 """$line""".toByteArray(),

@@ -106,7 +106,7 @@ class Tank : Iterable<Cell?>, Serializable {
         val headerStr = StringBuilder()
         headerStr.append("Generation,Time Elapsed,Parent 1 ID,Parent 2 ID,ID,")
         for (gene in protozoan.genome.genes) headerStr.append(gene.traitName).append(",")
-        appendLine(genomeFile, headerStr.toString())
+        appendLine(genomeFile!!, headerStr.toString())
     }
 
     fun hasBeenInitialised(): Boolean {
@@ -176,7 +176,7 @@ class Tank : Iterable<Cell?>, Serializable {
     private fun flushWrites() {
         val genomeWritesHandled: MutableList<String> = ArrayList()
         for (line in genomesToWrite) {
-            appendLine(genomeFile, line)
+            appendLine(genomeFile!!, line)
             genomeWritesHandled.add(line)
         }
         genomesToWrite.removeAll(genomeWritesHandled.toSet())

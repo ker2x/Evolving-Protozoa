@@ -5,11 +5,11 @@ import kotlin.math.sqrt
 
 object Geometry {
 
-    @JvmStatic
-    fun circleIntersectLineCoefficients(dir: Vector2?, x: Vector2?, r: Float): FloatArray? {
-        val a = dir!!.len2()
+    //@JvmStatic
+    fun circleIntersectLineCoefficients(dir: Vector2, x: Vector2, r: Float): FloatArray? {
+        val a = dir.len2()
         val b = -2 * dir.dot(x)
-        val c = x!!.len2() - r * r
+        val c = x.len2() - r * r
         val disc = b * b - 4 * a * c
         if (disc < 0) return null
         val t1 = ((-b + sqrt(disc.toDouble())) / (2 * a)).toFloat()
@@ -17,7 +17,7 @@ object Geometry {
         return floatArrayOf(t1, t2)
     }
 
-    @JvmStatic
+    //@JvmStatic
     fun lineIntersectCondition(coefs: FloatArray?): Boolean {
         if (coefs == null) return false
         val t1 = coefs[0]
@@ -26,7 +26,7 @@ object Geometry {
         return eps < t1 && t1 < 1 - eps || eps < t2 && t2 < 1 - eps
     }
 
-    @JvmStatic
+    //@JvmStatic
     fun doesLineIntersectCircle(line: Array<Vector2?>, circlePos: Vector2, circleR: Float): Boolean {
         val dir = line[1]!!.sub(line[0]!!)
         val x = circlePos.sub(line[0]!!)
@@ -34,12 +34,12 @@ object Geometry {
         return lineIntersectCondition(intersectionCoefs)
     }
 
-    @JvmStatic
+    //@JvmStatic
     fun isPointInsideCircle(circlePos: Vector2, radius: Float, p: Vector2): Boolean {
         return circlePos.sub(p).len2() <= radius * radius
     }
 
-    @JvmStatic
+    //@JvmStatic
     fun getSphereVolume(r: Float): Float {
         return (4 / 3 * Math.PI * r * r * r).toFloat()
     }
