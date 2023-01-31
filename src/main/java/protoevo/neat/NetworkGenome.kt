@@ -230,7 +230,7 @@ class NetworkGenome : Serializable {
             val inputs = arrayOfNulls<Neuron>(0)
             val weights = FloatArray(0)
             neurons[g!!.id] = Neuron(
-                g.id, inputs, weights, g.type, g.activation, g.label
+                g.id, inputs, weights, g.type, g.activation, g.label!!
             )
         }
         val inputCounts = IntArray(neurons.size)

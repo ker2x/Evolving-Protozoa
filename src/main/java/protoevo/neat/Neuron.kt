@@ -3,16 +3,23 @@ package protoevo.neat
 import protoevo.utils.CachedMath
 import java.io.Serializable
 import kotlin.math.exp
-import kotlin.math.tanh
 
-/**
- * Created by dylan on 26/05/2017.
+/***
+ * A Neuron is a node in the neural network.
+ * It has a state, which is the output of the neuron, and a list of inputs, which are the neurons that feed into this neuron.
+ * @constructor Creates a new Neuron with the given id, inputs, weights, type, and activation function.
+ * @param id The id of the neuron.
+ * @param inputs The inputs of the neuron.
+ * @param weights The weights of the inputs.
+ * @param type The type of the neuron.
+ * @param activation The activation function of the neuron.
+ * @param label The label of the neuron.
  */
 class Neuron(
     val id: Int,
     val inputs: Array<Neuron?>,
     val weights: FloatArray,
-    var type: Type?,
+    var type: Type,
     private var activation: (Float) -> Float,
     val label: String?
 ) : Comparable<Neuron>, Serializable {
@@ -93,9 +100,9 @@ class Neuron(
         var result = id
         result = 31 * result + inputs.contentHashCode()
         result = 31 * result + weights.contentHashCode()
-        result = 31 * result + (type?.hashCode() ?: 0)
+        result = 31 * result + type.hashCode()
         result = 31 * result + activation.hashCode()
-        result = 31 * result + (label?.hashCode() ?: 0)
+        result = 31 * result + label.hashCode()
         result = 31 * result + state.hashCode()
         result = 31 * result + lastState.hashCode()
         result = 31 * result + nextState.hashCode()
