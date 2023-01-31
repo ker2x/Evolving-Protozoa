@@ -10,14 +10,14 @@ import javax.swing.SwingUtilities
 class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
 
     var currentMousePosition = Vector2(0f, 0f)
-        private set
-    private var positionOnLeftClickDown = Vector2(0f, 0f)
     var mouseLeftClickDelta: Vector2? = Vector2(0f, 0f)
-        private set
+
+    private var positionOnLeftClickDown = Vector2(0f, 0f)
     private val keys = BooleanArray(65536)
     private val mouseButtons = BooleanArray(4)
     private val mouseJustDown = BooleanArray(4)
     private val onPressHandlers = HashMap<Int, Runnable>()
+
     @JvmField
     var onLeftMouseRelease: Runnable? = null
 
