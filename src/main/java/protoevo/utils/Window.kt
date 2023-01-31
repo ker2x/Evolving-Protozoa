@@ -5,7 +5,6 @@ import protoevo.core.Controller
 import protoevo.core.Renderer
 import protoevo.core.Simulation
 import java.awt.Canvas
-import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
@@ -23,17 +22,16 @@ class Window(title: String = "Evolving Protozoa", simulation: Simulation) : Canv
     val frame: JFrame
 	val input: Input = Input()
 
-    private val renderer: Renderer
-    private val controller: Controller
-    private var screenSize :Dimension = Toolkit.getDefaultToolkit().screenSize
-    private val timer = Timer(Application.refreshDelay.toInt(), this)
+    private var screenSize = Toolkit.getDefaultToolkit().screenSize
+    private val renderer   = Renderer(simulation, this)
+    private val controller = Controller(input, simulation, renderer)
+    private val timer      = Timer(Application.refreshDelay.toInt(), this)
+
+    val currentMousePosition: Vector2
+        get() = input.currentMousePosition
 
     init {
         TextStyle.loadFonts()
-
-        renderer = Renderer(simulation, this)
-        controller = Controller(input, simulation, renderer)
-
         frame = JFrame(title)
         frame.preferredSize = screenSize
         frame.maximumSize   = screenSize
@@ -42,9 +40,10 @@ class Window(title: String = "Evolving Protozoa", simulation: Simulation) : Canv
         frame.isUndecorated = true
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
         frame.isResizable = false
+        frame.isVisible = true
+
         frame.setLocationRelativeTo(null)
         frame.add(renderer)
-        frame.isVisible = true
 
         renderer.addKeyListener(input)
         renderer.addMouseListener(input)
@@ -72,9 +71,6 @@ class Window(title: String = "Evolving Protozoa", simulation: Simulation) : Canv
     override fun getHeight(): Int {
         return screenSize.height
     }
-
-    val currentMousePosition: Vector2
-        get() = input.currentMousePosition
 
     companion object {
         private const val serialVersionUID = -2111860594941368902L
