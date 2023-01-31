@@ -8,6 +8,7 @@ import javax.swing.SwingUtilities
  * Input class for handling keyboard and mouse input.
  */
 class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, MouseWheelListener {
+
     var currentMousePosition = Vector2(0f, 0f)
         private set
     private var positionOnLeftClickDown = Vector2(0f, 0f)
@@ -19,6 +20,7 @@ class Input : KeyListener, FocusListener, MouseListener, MouseMotionListener, Mo
     private val onPressHandlers = HashMap<Int, Runnable>()
     @JvmField
     var onLeftMouseRelease: Runnable? = null
+
     fun registerOnPressHandler(key: Int, handler: Runnable) {
         onPressHandlers[key] = handler
     }

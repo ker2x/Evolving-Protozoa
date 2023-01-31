@@ -17,40 +17,27 @@ import javax.swing.Timer
  * @param title The title of the window.
  * @param simulation The simulation to be rendered.
  * @constructor Creates a new window.
- * @property frame The JFrame of the window.
- * @property input The input handler for the window.
- * @property renderer The renderer for the window.
- * @property simulation The simulation to be rendered.
- * @property controller The controller for the window.
- * @property width The width of the window.
- * @property height The height of the window.
- * @property timer The timer for the window.
  */
-class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, ActionListener {
+class Window(title: String = "Evolving Protozoa", simulation: Simulation) : Canvas(), Runnable, ActionListener {
+
     val frame: JFrame
-    @JvmField
-	val input: Input
+	val input: Input = Input()
+
     private val renderer: Renderer
-    private val simulation: Simulation
     private val controller: Controller
-    private val width: Int
-    private val height: Int
+    private var screenSize :Dimension = Toolkit.getDefaultToolkit().screenSize
     private val timer = Timer(Application.refreshDelay.toInt(), this)
 
     init {
         TextStyle.loadFonts()
-        val d = Toolkit.getDefaultToolkit().screenSize
-        width = d.getWidth().toInt()
-        height = d.getHeight().toInt()
-        //		width = 1920;
-//		height = 1080;
-        this.simulation = simulation
-        input = Input()
+
         renderer = Renderer(simulation, this)
+        controller = Controller(input, simulation, renderer)
+
         frame = JFrame(title)
-        frame.preferredSize = Dimension(width, height)
-        frame.maximumSize = Dimension(width, height)
-        frame.minimumSize = Dimension(width, height)
+        frame.preferredSize = screenSize
+        frame.maximumSize   = screenSize
+        frame.minimumSize   = screenSize
         frame.extendedState = JFrame.MAXIMIZED_BOTH
         frame.isUndecorated = true
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
@@ -58,7 +45,7 @@ class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, Actio
         frame.setLocationRelativeTo(null)
         frame.add(renderer)
         frame.isVisible = true
-        controller = Controller(input, simulation, renderer)
+
         renderer.addKeyListener(input)
         renderer.addMouseListener(input)
         renderer.addMouseMotionListener(input)
@@ -79,15 +66,12 @@ class Window(title: String?, simulation: Simulation) : Canvas(), Runnable, Actio
     }
 
     override fun getWidth(): Int {
-        return width
+        return screenSize.width
     }
 
     override fun getHeight(): Int {
-        return height
+        return screenSize.height
     }
-
-    val dimensions: Vector2
-        get() = Vector2(width.toFloat(), height.toFloat())
 
     val currentMousePosition: Vector2
         get() = input.currentMousePosition

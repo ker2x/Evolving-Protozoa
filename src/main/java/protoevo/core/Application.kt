@@ -11,7 +11,7 @@ import kotlin.system.exitProcess
  */
 object Application {
 
-    const val refreshDelay = 1 //1000 / 120f
+    const val refreshDelay :Float = 1f //1000 / 120f
 
     @JvmStatic
     fun main(args: Array<String>) {
