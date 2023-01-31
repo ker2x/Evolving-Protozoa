@@ -36,14 +36,10 @@ object FileIO {
 
     @JvmStatic
     fun appendLine(filePath: String?, line: String) {
-        try {
             Files.write(
                 Paths.get(filePath),
-                """$line
-""".toByteArray(),
+                """$line""".toByteArray(),
                 StandardOpenOption.APPEND
             )
-        } catch (ignored: IOException) {
-        }
     }
 }
