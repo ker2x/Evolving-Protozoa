@@ -26,9 +26,6 @@ class Neuron(
 
 
     enum class Type() : Serializable {
-        //SENSOR("SENSOR"),
-        //HIDDEN("HIDDEN"),
-        //OUTPUT("OUTPUT");
         SENSOR,
         HIDDEN,
         OUTPUT;
