@@ -6,17 +6,7 @@ import kotlin.math.*
 /***
  * A 2D vector class
  */
-class Vector2(x: Float, y: Float) : Serializable {
-
-    @JvmField
-    var x : Float = 0f
-    @JvmField
-    var y : Float = 0f
-
-    init {
-        this.x = x
-        this.y = y
-    }
+class Vector2(var x: Float = 0f, var y: Float = 0f) : Serializable {
 
     fun len2() :Float = x * x + y * y
     fun len() :Float = sqrt(x * x + y * y)
