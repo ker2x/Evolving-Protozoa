@@ -36,11 +36,11 @@ class Window(title: String = "Evolving Protozoa", simulation: Simulation) : Canv
         frame.preferredSize = screenSize
         frame.maximumSize   = screenSize
         frame.minimumSize   = screenSize
-        frame.extendedState = JFrame.MAXIMIZED_BOTH
+        frame.isResizable   = false
         frame.isUndecorated = true
+        frame.isVisible     = true
+        frame.extendedState = JFrame.MAXIMIZED_BOTH
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-        frame.isResizable = false
-        frame.isVisible = true
 
         frame.setLocationRelativeTo(null)
         frame.add(renderer)
