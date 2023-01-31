@@ -1,6 +1,6 @@
 package protoevo.core
 
-import protoevo.core.Application.exit
+import protoevo.core.Application
 import protoevo.utils.Input
 import protoevo.utils.Vector2
 import java.awt.event.KeyEvent
@@ -33,7 +33,7 @@ class Controller(private val input: Input, private val simulation: Simulation, p
     fun update() {
         if (input.getKey(KeyEvent.VK_ESCAPE)) {
             simulation.close()
-            exit()
+            Application.exit()
         }
         renderer.setZoom(1 - input.mouseWheelRotation / 7.0f)
         if (input.isLeftMouseJustPressed) handleLeftMouseClick()

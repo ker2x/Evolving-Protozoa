@@ -1,6 +1,6 @@
 package protoevo.utils
 
-import protoevo.core.Application.exit
+import protoevo.core.Application.Companion.exit
 import protoevo.core.Simulation
 import java.io.*
 

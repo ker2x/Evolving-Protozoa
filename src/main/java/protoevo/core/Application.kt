@@ -5,26 +5,24 @@ import protoevo.utils.Window
 import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
-/***
- * The main entry point for the application.
- * @property refreshDelay The delay between each frame.
- */
-object Application {
 
-    const val refreshDelay :Float = 1f //1000 / 120f
+fun main(args: Array<String>) {
+    Application(args)
+}
 
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val simulation = Simulation("gaia-ninetales-magni")
-        val window = Window("Evolving Protozoa", simulation)
+class Application(val args: Array<String>) {
 
-        SwingUtilities.invokeLater(window)
-        Thread(REPL(simulation, window)).start()
-        simulation.simulate()
-    }
+     init {
+         val simulation = Simulation("gaia-ninetales-magni")
+         val window = Window("Evolving Protozoa", simulation)
 
-    @JvmStatic
-	fun exit() {
-        exitProcess(0)
+         SwingUtilities.invokeLater(window)
+         Thread(REPL(simulation, window)).start()
+         simulation.simulate()
+     }
+
+    companion object {
+        const val refreshDelay :Float = 1f
+        fun exit(): Nothing = exitProcess(0)
     }
 }
