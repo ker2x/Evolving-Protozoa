@@ -49,10 +49,6 @@ class Neuron(
     var graphicsY = -1
     var isConnectedToOutput = true
 
-    init {
-        if (type == Type.OUTPUT) isConnectedToOutput = true
-    }
-
     fun tick() {
         nextState = 0.0f
         for (i in inputs.indices) nextState += inputs[i]!!.state * weights[i]

@@ -20,8 +20,13 @@ class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
         var nOutputs = 0
         for (neuron in neurons) {
             requireNotNull(neuron) { "Cannot handle null neurons." }
-            if (neuron.type == Neuron.Type.SENSOR) nSensors++ else if (neuron.type == Neuron.Type.OUTPUT) nOutputs++
+            if (neuron.type == Neuron.Type.SENSOR) {
+                nSensors++
+            } else if (neuron.type == Neuron.Type.OUTPUT) {
+                nOutputs++
+            }
         }
+
         inputSize = nSensors
         inputNeurons = arrayOfNulls(inputSize)
         var i = 0
@@ -29,6 +34,7 @@ class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
             inputNeurons[i] = neuron
             i++
         }
+
         outputNeurons = arrayOfNulls(nOutputs)
         i = 0
         for (neuron in neurons) if (neuron?.type == Neuron.Type.OUTPUT) {
@@ -53,7 +59,7 @@ class NeuralNetwork(val neurons: Array<Neuron?>) : Serializable {
     private fun calculateDepth(explore: Array<Neuron?>?, visited: BooleanArray): Int {
         val unexplored = Arrays.stream(explore)
             .filter { n: Neuron? -> !visited[n!!.id] }
-            .collect(Collectors.toList())
+            .collect(Collectors.toList())!!
         for (n in explore!!) if (n != null) {
             visited[n.id] = true
         }

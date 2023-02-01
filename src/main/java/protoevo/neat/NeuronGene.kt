@@ -1,6 +1,5 @@
 package protoevo.neat
 
-//import protoevo.neat.Neuron.Activation
 import java.io.Serializable
 import java.util.*
 
